@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "484124430882",
+    "firebase_url": "https://vasanshop-bf2d0.firebaseio.com",
+    "project_id": "vasanshop-bf2d0",
+    "storage_bucket": "vasanshop-bf2d0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:484124430882:android:e00319975ae03745eef07b",
+        "android_client_info": {
+          "package_name": "com.example.abhi_shop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "484124430882-89ke1drnq7dj73geu2fjp223bm1nidrf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAP_y9MTItjnS3eawDfebU4p9kZiXSI3g0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "484124430882-89ke1drnq7dj73geu2fjp223bm1nidrf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
