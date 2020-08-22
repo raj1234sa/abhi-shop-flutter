@@ -1,10 +1,13 @@
 import 'package:abhi_shop/models/product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_flexible_toast/flutter_flexible_toast.dart';
 
 final _firestore = FirebaseFirestore.instance;
 
 class AddProductScreen extends StatefulWidget {
+  static final ROUTE_NAME = 'add_product_screen';
   @override
   _AddProductScreenState createState() => _AddProductScreenState();
 }
@@ -17,19 +20,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _prodNameController = TextEditingController();
   final _prodSizeController = TextEditingController();
   final _prodPriceController = TextEditingController();
+  bool _isHotProduct = false;
+  bool _isNewArrival = true;
 
-  _saveForm(BuildContext context) {
+  _saveForm(BuildContext context) async {
     final isValidform = _formKey.currentState.validate();
     if (isValidform) {
+      await Firebase.initializeApp();
       Product product = Product(
         id: DateTime.now().toString(),
         productName: _prodNameController.text,
         productSize: _prodSizeController.text,
         productPrice: double.parse(_prodPriceController.text),
-        isHotProduct: true,
-        isNewArrival: true,
+        isHotProduct: _isHotProduct,
+        isNewArrival: _isNewArrival,
       );
-      _firestore.collection('products').add(product.toJson());
+      await _firestore.collection('products').add(product.toJson());
+      Navigator.pop(context);
     } else {}
   }
 
@@ -47,7 +54,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Abhishek Vasan Bhandar"),
+        title: Text("Add Product"),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.save),
@@ -120,6 +127,24 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 onFieldSubmitted: (_) {
                   _saveForm(context);
                 },
+              ),
+              SwitchListTile(
+                value: _isHotProduct,
+                onChanged: (value) {
+                  setState(() {
+                    _isHotProduct = value;
+                  });
+                },
+                title: Text('Hot Product'),
+              ),
+              SwitchListTile(
+                value: _isNewArrival,
+                onChanged: (value) {
+                  setState(() {
+                    _isNewArrival = value;
+                  });
+                },
+                title: Text('New Arrival'),
               ),
             ],
           ),

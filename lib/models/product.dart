@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 class Product {
@@ -7,6 +9,7 @@ class Product {
   final double productPrice;
   final bool isNewArrival;
   final bool isHotProduct;
+  final _firebase = FirebaseFirestore.instance;
 
   Product({
     @required this.id,
@@ -16,14 +19,6 @@ class Product {
     @required this.isHotProduct,
     @required this.isNewArrival,
   });
-
-  Product.fromJson(Map<String, dynamic> json)
-      : id = json['id'],
-        productName = json['productName'],
-        productSize = json['productSize'],
-        productPrice = json['productPrice'],
-        isHotProduct = json['isHotProduct'],
-        isNewArrival = json['isNewArrival'];
 
   Map<String, dynamic> toJson() => {
         'id': id,
