@@ -30,9 +30,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
         isNewArrival: true,
       );
       _firestore.collection('products').add(product.toJson());
-    } else {
-      
-    }
+    } else {}
+  }
+
+  @override
+  void dispose() {
+    _sizeNode.dispose();
+    _priceNode.dispose();
+    _prodNameController.dispose();
+    _prodSizeController.dispose();
+    _prodPriceController.dispose();
+    super.dispose();
   }
 
   @override
