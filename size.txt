@@ -1,0 +1,1 @@
+Size: ${_visibleProducts[index].productSize} = ${_visibleProducts[index].productPrice.toString()}

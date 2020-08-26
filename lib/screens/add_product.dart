@@ -2,7 +2,7 @@ import 'package:abhi_shop/models/product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_flexible_toast/flutter_flexible_toast.dart';
+import 'package:toast/toast.dart';
 
 final _firestore = FirebaseFirestore.instance;
 
@@ -16,27 +16,65 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _sizeNode = FocusNode();
   final _priceNode = FocusNode();
+  Product editProductData;
 
   final _prodNameController = TextEditingController();
   final _prodSizeController = TextEditingController();
   final _prodPriceController = TextEditingController();
+  List<Map<String, TextEditingController>> _priceSizeControllers = [
+    {
+      'size': TextEditingController(),
+      'price': TextEditingController(),
+    },
+  ];
+
+  List<Map<String, FocusNode>> _focusNodes = [
+    {
+      'size': FocusNode(),
+      'price': FocusNode(),
+    },
+  ];
+
   bool _isHotProduct = false;
   bool _isNewArrival = true;
+  bool initstate = false;
 
   _saveForm(BuildContext context) async {
     final isValidform = _formKey.currentState.validate();
     if (isValidform) {
       await Firebase.initializeApp();
       Product product = Product(
-        id: DateTime.now().toString(),
+        id: editProductData == null
+            ? DateTime.now().toString()
+            : editProductData.id,
         productName: _prodNameController.text,
-        productSize: _prodSizeController.text,
-        productPrice: double.parse(_prodPriceController.text),
+        // productSize: _prodSizeController.text,
+        // productPrice: double.parse(_prodPriceController.text),
         isHotProduct: _isHotProduct,
         isNewArrival: _isNewArrival,
       );
-      await _firestore.collection('products').add(product.toJson());
-      Navigator.pop(context);
+      if (editProductData == null) {
+        await _firestore.collection('products').add(product.toJson());
+        Toast.show(
+          'Product is added!!',
+          context,
+          duration: Toast.LENGTH_LONG + 5,
+          backgroundColor: Colors.green,
+        );
+        Navigator.pop(context);
+      } else {
+        await _firestore
+            .collection('products')
+            .doc(editProductData.docId)
+            .set(product.toJson());
+        Toast.show(
+          'Product is updated!!',
+          context,
+          duration: Toast.LENGTH_LONG + 5,
+          backgroundColor: Colors.green,
+        );
+        Navigator.pop(context);
+      }
     } else {}
   }
 
@@ -48,6 +86,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _prodSizeController.dispose();
     _prodPriceController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    if (initstate == false) {
+      Product prodDoc = ModalRoute.of(context).settings.arguments;
+      if (prodDoc != null) {
+        _prodNameController.text = prodDoc.productName;
+        // _prodSizeController.text = prodDoc.productSize;
+        // _prodPriceController.text = prodDoc.productPrice.toString();
+        _isHotProduct = prodDoc.isHotProduct;
+        _isNewArrival = prodDoc.isNewArrival;
+        editProductData = prodDoc;
+      }
+      setState(() {
+        initstate = true;
+      });
+    }
+    super.didChangeDependencies();
   }
 
   @override
@@ -87,46 +144,89 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 },
                 textInputAction: TextInputAction.next,
                 onFieldSubmitted: (_) {
-                  FocusScope.of(context).requestFocus(_sizeNode);
+                  FocusScope.of(context).requestFocus(_focusNodes[0]['size']);
                 },
               ),
-              TextFormField(
-                controller: _prodSizeController,
-                decoration: InputDecoration(
-                  labelText: 'Product Size',
-                ),
-                validator: (value) {
-                  if (value.isEmpty) {
-                    return 'Product size is required.';
-                  }
-                  return null;
+              ..._priceSizeControllers.map((e) {
+                int index = _priceSizeControllers.indexOf(e);
+                return Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextFormField(
+                        controller: _priceSizeControllers[index]['size'],
+                        decoration: InputDecoration(
+                          labelText: 'Product Size',
+                        ),
+                        validator: (value) {
+                          if (value.isEmpty) {
+                            return 'Product size is required.';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) {
+                          FocusScope.of(context)
+                              .requestFocus(_focusNodes[index]['price']);
+                        },
+                        textInputAction: TextInputAction.next,
+                        focusNode: _focusNodes[index]['size'],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _priceSizeControllers[index]['price'],
+                        decoration: InputDecoration(
+                          labelText: 'Product Price',
+                        ),
+                        validator: (value) {
+                          if (value.isEmpty) {
+                            return 'Product price is required.';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) {
+                          FocusScope.of(context)
+                              .requestFocus(_focusNodes[index + 1]['size']);
+                        },
+                        textInputAction: TextInputAction.next,
+                        focusNode: _focusNodes[index]['price'],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    if (_priceSizeControllers.length > 1)
+                      GestureDetector(
+                        child: Icon(
+                          Icons.delete,
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _priceSizeControllers.removeAt(index);
+                            _focusNodes.removeAt(index);
+                          });
+                        },
+                      ),
+                  ],
+                );
+              }),
+              RaisedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _priceSizeControllers.add({
+                      'size': TextEditingController(),
+                      'price': TextEditingController(),
+                    });
+                    _focusNodes.add({
+                      'size': FocusNode(),
+                      'price': FocusNode(),
+                    });
+                  });
                 },
-                textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) {
-                  FocusScope.of(context).requestFocus(_priceNode);
-                },
-                focusNode: _sizeNode,
-              ),
-              TextFormField(
-                controller: _prodPriceController,
-                decoration: InputDecoration(
-                  labelText: 'Product Price',
-                ),
-                validator: (value) {
-                  if (value.isEmpty) {
-                    return 'Product price is required.';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Product price must be numerics.';
-                  }
-                  return null;
-                },
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.done,
-                focusNode: _priceNode,
-                onFieldSubmitted: (_) {
-                  _saveForm(context);
-                },
+                icon: Icon(Icons.add),
+                label: Text('Add Size'),
               ),
               SwitchListTile(
                 value: _isHotProduct,
