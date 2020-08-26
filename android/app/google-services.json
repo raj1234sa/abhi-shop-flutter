@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "484124430882-m1vuvau48melt32rnj65r16halrv5089.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.abhi_shop",
+            "certificate_hash": "93b42a3f0671358b1a633a93db0d8d896af55362"
+          }
+        },
+        {
           "client_id": "484124430882-89ke1drnq7dj73geu2fjp223bm1nidrf.apps.googleusercontent.com",
           "client_type": 3
         }

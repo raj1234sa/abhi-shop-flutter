@@ -24,7 +24,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     super.initState();
   }
 
-  void getAllProducts() async {
+  Future<void> getAllProducts() async {
     await _productsRef.get().then((value) {
       setState(() {
         _allProducts = value.docs
@@ -85,7 +85,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           FocusScope.of(context).unfocus();
                         },
                         child: Icon(
-                          Icons.remove_circle_outline,
+                          Icons.close,
                           color: Theme.of(context).errorColor,
                         ),
                       )
@@ -115,10 +115,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                             IconButton(
                               icon: Icon(Icons.edit),
                               onPressed: () {
-                                Navigator.pushNamed(
+                                Navigator.push(
                                   context,
-                                  AddProductScreen.ROUTE_NAME,
-                                  arguments: _visibleProducts[index],
+                                  MaterialPageRoute(
+                                    builder: (context) => AddProductScreen(
+                                      editProduct: _visibleProducts[index],
+                                    ),
+                                  ),
                                 );
                               },
                             ),
@@ -127,7 +130,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               color: Theme.of(context).errorColor,
                               onPressed: () {
                                 _productsRef
-                                    .doc(_visibleProducts[index].docId)
+                                    .doc(
+                                      _visibleProducts[index].id,
+                                    )
                                     .delete()
                                     .then((value) {
                                   setState(() {

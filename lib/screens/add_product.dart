@@ -1,114 +1,212 @@
+import 'dart:io';
+
 import 'package:abhi_shop/models/product.dart';
+import 'package:abhi_shop/size_price.dart';
+import 'package:abhi_shop/widgets/icon_avatar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:toast/toast.dart';
+import 'package:uuid/uuid.dart';
+
+import '../models/product.dart';
 
 final _firestore = FirebaseFirestore.instance;
+final StorageReference storageReference=FirebaseStorage.instance.ref();
 
 class AddProductScreen extends StatefulWidget {
   static final ROUTE_NAME = 'add_product_screen';
+  final Product editProduct;
+
+  AddProductScreen({this.editProduct});
+
   @override
   _AddProductScreenState createState() => _AddProductScreenState();
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _sizeNode = FocusNode();
-  final _priceNode = FocusNode();
-  Product editProductData;
 
   final _prodNameController = TextEditingController();
-  final _prodSizeController = TextEditingController();
-  final _prodPriceController = TextEditingController();
-  List<Map<String, TextEditingController>> _priceSizeControllers = [
-    {
-      'size': TextEditingController(),
-      'price': TextEditingController(),
-    },
-  ];
-
-  List<Map<String, FocusNode>> _focusNodes = [
-    {
-      'size': FocusNode(),
-      'price': FocusNode(),
-    },
-  ];
 
   bool _isHotProduct = false;
   bool _isNewArrival = true;
-  bool initstate = false;
+
+  String productId;
+
+  File _imageFile;
+
+  List<ProductSizePrice> _productSizePriceList = [
+    ProductSizePrice(
+      sizeNameController: TextEditingController(),
+      sizePriceController: TextEditingController(),
+      sizeNameFocusNode: FocusNode(),
+      sizePriceFocusNode: FocusNode(),
+    )
+  ];
+
+  List<dynamic> getSizePricesFromModel() {
+    return _productSizePriceList
+        .map((sizePrice) => {
+              'size': sizePrice.sizeNameController.text,
+              'price': sizePrice.sizePriceController.text,
+            })
+        .toList();
+  }
+  // Future<void> compressImage() async {
+  //   final tempDir = await getTemporaryDirectory();
+  //   final path = tempDir.path;
+  //   Im.Image imageFile = Im.decodeImage(_file.readAsBytesSync());
+  //   final compressedImageFile = File('$path/img_$postId.jpg')
+  //     ..writeAsBytesSync(Im.encodeJpg(imageFile, quality: 85));
+  //   setState(() {
+  //     _file = compressedImageFile;
+  //   });
+  // }
+
+  Future<String> uploadImage(imageFile) async {
+    StorageUploadTask uploadTask =
+    storageReference.child('products').child('product_$productId.jpg').putFile(imageFile);
+
+    StorageTaskSnapshot storageTaskSnapshot = await uploadTask.onComplete;
+    String downloadUrl = await storageTaskSnapshot.ref.getDownloadURL();
+    return downloadUrl;
+  }
 
   _saveForm(BuildContext context) async {
-    final isValidform = _formKey.currentState.validate();
-    if (isValidform) {
-      await Firebase.initializeApp();
+    final isValidForm = _formKey.currentState.validate();
+    if (isValidForm) {
+      FocusScope.of(context).unfocus();
+      String mediaUrl= await uploadImage(_imageFile);
       Product product = Product(
-        id: editProductData == null
-            ? DateTime.now().toString()
-            : editProductData.id,
+        id: productId,
         productName: _prodNameController.text,
-        // productSize: _prodSizeController.text,
-        // productPrice: double.parse(_prodPriceController.text),
+        sizePrices: getSizePricesFromModel(),
         isHotProduct: _isHotProduct,
         isNewArrival: _isNewArrival,
+        imageUrl: mediaUrl,
       );
-      if (editProductData == null) {
-        await _firestore.collection('products').add(product.toJson());
-        Toast.show(
-          'Product is added!!',
-          context,
-          duration: Toast.LENGTH_LONG + 5,
-          backgroundColor: Colors.green,
-        );
-        Navigator.pop(context);
-      } else {
-        await _firestore
-            .collection('products')
-            .doc(editProductData.docId)
-            .set(product.toJson());
-        Toast.show(
-          'Product is updated!!',
-          context,
-          duration: Toast.LENGTH_LONG + 5,
-          backgroundColor: Colors.green,
-        );
-        Navigator.pop(context);
-      }
-    } else {}
+      await _firestore
+          .collection('products')
+          .doc(productId)
+          .set(product.toJson());
+      Toast.show(
+        widget.editProduct == null
+            ? 'Product is added!!'
+            : 'Product is updated!!',
+        context,
+        duration: Toast.LENGTH_LONG + 5,
+        backgroundColor: Colors.green,
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
   void dispose() {
-    _sizeNode.dispose();
-    _priceNode.dispose();
     _prodNameController.dispose();
-    _prodSizeController.dispose();
-    _prodPriceController.dispose();
+    _imageFile=null;
+
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    if (initstate == false) {
-      Product prodDoc = ModalRoute.of(context).settings.arguments;
-      if (prodDoc != null) {
-        _prodNameController.text = prodDoc.productName;
-        // _prodSizeController.text = prodDoc.productSize;
-        // _prodPriceController.text = prodDoc.productPrice.toString();
-        _isHotProduct = prodDoc.isHotProduct;
-        _isNewArrival = prodDoc.isNewArrival;
-        editProductData = prodDoc;
+  Future<void> _takePicture(ImageSource type) async {
+    // ignore: deprecated_member_use
+    final File image = await ImagePicker.pickImage(
+      source: type,
+    );
+    // setState(() {
+    //   _imageFile = image;
+    // });
+    if (image != null) {
+      final croppedImage = await ImageCropper.cropImage(
+        sourcePath: image.path,
+        aspectRatio: CropAspectRatio(ratioX: 1.0, ratioY: 1.0),
+      );
+      if (croppedImage != null) {
+        print("Picked image path ${croppedImage.path}");
+        setState(() {
+          _imageFile = croppedImage;
+        });
       }
-      setState(() {
-        initstate = true;
-      });
     }
-    super.didChangeDependencies();
+  }
+
+  void showImagePickerOption(BuildContext ctx) {
+    showModalBottomSheet(
+        context: ctx,
+        builder: (_) {
+          return GestureDetector(
+            onTap: () {},
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              height: 80,
+              margin: EdgeInsets.all(25),
+              child: Row(
+                children: [
+                  IconAvatar(
+                    color: Colors.lightBlue,
+                    icon: Icons.camera_alt,
+                    name: 'Camera',
+                    onPress: () {
+                      Navigator.of(context).pop();
+                      _takePicture(ImageSource.camera);
+                    },
+                  ),
+                  IconAvatar(
+                    color: Colors.teal,
+                    icon: Icons.image,
+                    name: 'Gallery',
+                    onPress: () {
+                      Navigator.of(context).pop();
+
+                      _takePicture(ImageSource.gallery);
+                    },
+                  ),
+                  IconAvatar(
+                    color: Colors.redAccent,
+                    icon: Icons.clear,
+                    name: 'Clear',
+                    onPress: () {
+                      setState(() {
+                        _imageFile = null;
+                      });
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+  }
+
+
+  @override
+  void initState() {
+    productId = widget.editProduct == null
+        ? DateTime.now().millisecondsSinceEpoch.toString()
+        : widget.editProduct.id;
+    if (widget.editProduct != null) {
+      _prodNameController.text = widget.editProduct.productName;
+      _productSizePriceList = widget.editProduct.sizePrices
+          .map(
+            (sizePriceJson) => ProductSizePrice.fromJSON(sizePriceJson),
+          )
+          .toList();
+      _isHotProduct = widget.editProduct.isHotProduct;
+      _isNewArrival = widget.editProduct.isNewArrival;
+
+    }
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    var width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
         title: Text("Add Product"),
@@ -124,13 +222,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
       body: Container(
         child: Form(
           key: _formKey,
-          autovalidate: true,
           child: ListView(
             padding: EdgeInsets.symmetric(
               horizontal: 15,
               vertical: 5,
             ),
             children: <Widget>[
+              InkWell(
+                onTap: () => showImagePickerOption(context),
+                child: Container(
+                  alignment: Alignment.center,
+                  width: width,
+                  height: width-15,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.grey,
+                      width: 1.0,
+                    ),
+                  ),
+                  child: _imageFile == null
+                      ? Icon(
+                          Icons.add_circle,
+                          size: 50.0,
+                          color: Colors.blue,
+                        )
+                      : Image.file(
+                          _imageFile,
+                          width: width,
+                          height: width-15,
+                          fit: BoxFit.fill,
+                        ),
+                ),
+              ),
               TextFormField(
                 controller: _prodNameController,
                 decoration: InputDecoration(
@@ -144,16 +267,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 },
                 textInputAction: TextInputAction.next,
                 onFieldSubmitted: (_) {
-                  FocusScope.of(context).requestFocus(_focusNodes[0]['size']);
+                  FocusScope.of(context)
+                      .requestFocus(_productSizePriceList[0].sizeNameFocusNode);
                 },
               ),
-              ..._priceSizeControllers.map((e) {
-                int index = _priceSizeControllers.indexOf(e);
+              ..._productSizePriceList.map((productSizePrice) {
+                int index = _productSizePriceList.indexOf(productSizePrice);
                 return Row(
                   children: <Widget>[
                     Expanded(
                       child: TextFormField(
-                        controller: _priceSizeControllers[index]['size'],
+                        controller: productSizePrice.sizeNameController,
                         decoration: InputDecoration(
                           labelText: 'Product Size',
                         ),
@@ -164,11 +288,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           return null;
                         },
                         onFieldSubmitted: (_) {
-                          FocusScope.of(context)
-                              .requestFocus(_focusNodes[index]['price']);
+                          FocusScope.of(context).requestFocus(
+                              productSizePrice.sizePriceFocusNode);
                         },
                         textInputAction: TextInputAction.next,
-                        focusNode: _focusNodes[index]['size'],
+                        focusNode: productSizePrice.sizeNameFocusNode,
                       ),
                     ),
                     SizedBox(
@@ -176,7 +300,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     Expanded(
                       child: TextFormField(
-                        controller: _priceSizeControllers[index]['price'],
+                        keyboardType: TextInputType.number,
+                        controller: productSizePrice.sizePriceController,
                         decoration: InputDecoration(
                           labelText: 'Product Price',
                         ),
@@ -187,25 +312,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           return null;
                         },
                         onFieldSubmitted: (_) {
-                          FocusScope.of(context)
-                              .requestFocus(_focusNodes[index + 1]['size']);
+                          FocusScope.of(context).requestFocus(
+                              _productSizePriceList[index + 1]
+                                  .sizeNameFocusNode);
                         },
                         textInputAction: TextInputAction.next,
-                        focusNode: _focusNodes[index]['price'],
+                        focusNode: productSizePrice.sizePriceFocusNode,
                       ),
                     ),
                     SizedBox(
                       width: 10,
                     ),
-                    if (_priceSizeControllers.length > 1)
+                    if (_productSizePriceList.length > 1)
                       GestureDetector(
                         child: Icon(
                           Icons.delete,
                         ),
                         onTap: () {
                           setState(() {
-                            _priceSizeControllers.removeAt(index);
-                            _focusNodes.removeAt(index);
+                            _productSizePriceList.removeAt(index);
                           });
                         },
                       ),
@@ -215,14 +340,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
               RaisedButton.icon(
                 onPressed: () {
                   setState(() {
-                    _priceSizeControllers.add({
-                      'size': TextEditingController(),
-                      'price': TextEditingController(),
-                    });
-                    _focusNodes.add({
-                      'size': FocusNode(),
-                      'price': FocusNode(),
-                    });
+                    _productSizePriceList.add(ProductSizePrice(
+                      sizeNameController: TextEditingController(),
+                      sizePriceController: TextEditingController(),
+                      sizeNameFocusNode: FocusNode(),
+                      sizePriceFocusNode: FocusNode(),
+                    ));
                   });
                 },
                 icon: Icon(Icons.add),
