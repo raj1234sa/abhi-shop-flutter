@@ -40,6 +40,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   File _imageFile;
   bool _loading = false;
+  Directory tempDir;
+
 
   List<ProductSizePrice> _productSizePriceList = [
     ProductSizePrice(
@@ -82,14 +84,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return downloadUrl;
   }
 
-  _saveForm(BuildContext context) async {
+  Future<void> _saveForm(BuildContext context) async {
     setState(() {
       _loading = true;
     });
     final isValidForm = _formKey.currentState.validate();
     if (isValidForm) {
       FocusScope.of(context).unfocus();
-      compressImage(_imageFile);
+      // await compressImage(_imageFile);
       String mediaUrl = await uploadImage(_imageFile);
       Product product = Product(
         id: productId,
@@ -123,6 +125,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _prodNameController.dispose();
     _imageFile = null;
     widget.editProduct = null;
+    tempDir.delete(recursive: true);
     super.dispose();
   }
 
@@ -193,8 +196,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         });
   }
 
-  @override
-  void initState() {
+  Future<void> initializeData()async{
+    tempDir=await getTemporaryDirectory();
+
     productId = widget.editProduct == null
         ? DateTime.now().millisecondsSinceEpoch.toString()
         : widget.editProduct.id;
@@ -206,26 +210,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _productSizePriceList = widget.editProduct.sizePrices
           .map(
             (sizePriceJson) => ProductSizePrice.fromJSON(sizePriceJson),
-          )
+      )
           .toList();
       _isHotProduct = widget.editProduct.isHotProduct;
       _isNewArrival = widget.editProduct.isNewArrival;
-      convertUriToFile(url: widget.editProduct.imageUrl).then((value) {
+      File _fileImage = await convertUriToFile(url: widget.editProduct.imageUrl);
+      if(_fileImage != null){
+        print('this is file image : ${_fileImage.path}');
         setState(() {
-          _imageFile = value;
+          _imageFile = _fileImage;
           _loading = false;
         });
-      });
+      }
     }
+  }
+
+  @override
+  void initState() {
+    initializeData();
     super.initState();
   }
 
   Future<File> convertUriToFile({String url}) async {
-    Directory tempDir = await getTemporaryDirectory();
-    File file = new File('${tempDir.path}/${widget.editProduct.id}.jpg');
+
+    File file = new File('${tempDir.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg');
     http.Response response = await http.get(url);
-    await file.writeAsBytes(response.bodyBytes);
-    return file;
+    File networkImage = await file.writeAsBytes(response.bodyBytes);
+    return networkImage;
   }
 
   @override

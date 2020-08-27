@@ -32,7 +32,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Future<void> getAllProducts() async {
-    await _productsRef.get().then((value) {
+     _productsRef.get().then((value) {
       setState(() {
         _allProducts = value.docs
             .map(
@@ -64,7 +64,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    getAllProducts();
     return Scaffold(
       appBar: AppBar(
         title: Text('Product List'),
@@ -119,6 +118,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       child: ListView.builder(
                         itemBuilder: (context, index) {
                           return ListTile(
+                              leading: CircleAvatar(
+                                  backgroundImage: NetworkImage(
+                                      _visibleProducts[index].imageUrl)),
                               title: Text(_visibleProducts[index].productName),
                               subtitle: Text(
                                 "",
@@ -129,8 +131,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                   children: <Widget>[
                                     IconButton(
                                       icon: Icon(Icons.edit),
-                                      onPressed: () {
-                                        Navigator.push(
+                                      onPressed: () async {
+                                        await Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
@@ -140,6 +142,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                             ),
                                           ),
                                         );
+                                        getAllProducts();
                                       },
                                     ),
                                     IconButton(
