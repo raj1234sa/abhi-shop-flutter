@@ -9,7 +9,6 @@ class Product {
   final bool isHotProduct;
   final String imageUrl;
 
-
   Product({
     @required this.id,
     @required this.productName,
@@ -17,7 +16,6 @@ class Product {
     @required this.isHotProduct,
     @required this.isNewArrival,
     this.imageUrl,
-
   });
 
   Product.fromJson(DocumentSnapshot json)
