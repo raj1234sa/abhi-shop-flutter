@@ -32,7 +32,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Future<void> getAllProducts() async {
-     _productsRef.get().then((value) {
+    _productsRef.get().then((value) {
       setState(() {
         _allProducts = value.docs
             .map(
@@ -65,6 +65,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: Container(
+          child: SafeArea(
+            child: Text('Shop Head'),
+          ),
+        ),
+      ),
       appBar: AppBar(
         title: Text('Product List'),
         actions: <Widget>[
@@ -111,101 +118,108 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
                 if (_visibleProducts.length > 0)
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        FocusScope.of(context).unfocus();
-                      },
-                      child: ListView.builder(
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                              leading: CircleAvatar(
-                                  backgroundImage: NetworkImage(
-                                      _visibleProducts[index].imageUrl)),
-                              title: Text(_visibleProducts[index].productName),
-                              subtitle: Text(
-                                "",
-                              ),
-                              trailing: Container(
-                                width: MediaQuery.of(context).size.width * .27,
-                                child: Row(
-                                  children: <Widget>[
-                                    IconButton(
-                                      icon: Icon(Icons.edit),
-                                      onPressed: () async {
-                                        await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                AddProductScreen(
-                                              editProduct:
-                                                  _visibleProducts[index],
-                                            ),
-                                          ),
-                                        );
-                                        getAllProducts();
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: Icon(Icons.delete),
-                                      color: Theme.of(context).errorColor,
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) {
-                                            return AlertDialog(
-                                              title: Text('Warning'),
-                                              content: Text(
-                                                'Are you sure to delete the product??',
-                                              ),
-                                              actions: <Widget>[
-                                                FlatButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context)
-                                                        .pop(false);
-                                                  },
-                                                  child: Text('No'),
-                                                ),
-                                                FlatButton(
-                                                  onPressed: () {
-                                                    String prodId =
-                                                        _visibleProducts[index]
-                                                            .id;
-                                                    _productsRef
-                                                        .doc(
-                                                          prodId,
-                                                        )
-                                                        .delete()
-                                                        .then((value) async {
-                                                      storageReference
-                                                          .child(
-                                                              'products/product_$prodId.jpg')
-                                                          .delete()
-                                                          .then((value) {});
-                                                      setState(() {
-                                                        _productsRef =
-                                                            FirebaseFirestore
-                                                                .instance
-                                                                .collection(
-                                                                    'products');
-                                                        getAllProducts();
-                                                      });
-                                                    });
-                                                    Navigator.of(context)
-                                                        .pop(true);
-                                                  },
-                                                  child: Text('Yes'),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ));
+                    child: RefreshIndicator(
+                      onRefresh: () => getAllProducts(),
+                      child: GestureDetector(
+                        onTap: () {
+                          FocusScope.of(context).unfocus();
                         },
-                        itemCount: _visibleProducts.length,
+                        child: ListView.builder(
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundImage: NetworkImage(
+                                      _visibleProducts[index].imageUrl),
+                                ),
+                                title:
+                                    Text(_visibleProducts[index].productName),
+                                subtitle: Text(
+                                  "",
+                                ),
+                                trailing: Container(
+                                  width:
+                                      MediaQuery.of(context).size.width * .27,
+                                  child: Row(
+                                    children: <Widget>[
+                                      IconButton(
+                                        icon: Icon(Icons.edit),
+                                        onPressed: () async {
+                                          await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AddProductScreen(
+                                                editProduct:
+                                                    _visibleProducts[index],
+                                              ),
+                                            ),
+                                          );
+                                          getAllProducts();
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete),
+                                        color: Theme.of(context).errorColor,
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) {
+                                              return AlertDialog(
+                                                title: Text('Warning'),
+                                                content: Text(
+                                                  'Are you sure to delete the product??',
+                                                ),
+                                                actions: <Widget>[
+                                                  FlatButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context)
+                                                          .pop(false);
+                                                    },
+                                                    child: Text('No'),
+                                                  ),
+                                                  FlatButton(
+                                                    onPressed: () {
+                                                      String prodId =
+                                                          _visibleProducts[
+                                                                  index]
+                                                              .id;
+                                                      _productsRef
+                                                          .doc(
+                                                            prodId,
+                                                          )
+                                                          .delete()
+                                                          .then((value) async {
+                                                        storageReference
+                                                            .child(
+                                                                'products/product_$prodId.jpg')
+                                                            .delete()
+                                                            .then((value) {});
+                                                        setState(() {
+                                                          _productsRef =
+                                                              FirebaseFirestore
+                                                                  .instance
+                                                                  .collection(
+                                                                      'products');
+                                                          getAllProducts();
+                                                        });
+                                                      });
+                                                      Navigator.of(context)
+                                                          .pop(true);
+                                                    },
+                                                    child: Text('Yes'),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ));
+                          },
+                          itemCount: _visibleProducts.length,
+                        ),
                       ),
                     ),
                   ),
