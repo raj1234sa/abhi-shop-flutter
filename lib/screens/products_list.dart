@@ -1,5 +1,6 @@
 import 'package:abhi_shop/models/product.dart';
 import 'package:abhi_shop/screens/add_product.dart';
+import 'package:abhi_shop/screens/category_list.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -68,7 +69,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
       drawer: Drawer(
         child: Container(
           child: SafeArea(
-            child: Text('Shop Head'),
+            child: Column(
+              children: <Widget>[
+                ListTile(
+                  title: Text('Products'),
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.of(context)
+                        .pushReplacementNamed(ProductListScreen.ROUTE_NAME);
+                  },
+                ),
+                ListTile(
+                  title: Text('Cateogries'),
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.of(context)
+                        .pushReplacementNamed(CategoryListScreen.ROUTE_NAME);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -127,96 +147,91 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         child: ListView.builder(
                           itemBuilder: (context, index) {
                             return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: NetworkImage(
-                                      _visibleProducts[index].imageUrl),
-                                ),
-                                title:
-                                    Text(_visibleProducts[index].productName),
-                                subtitle: Text(
-                                  "",
-                                ),
-                                trailing: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * .27,
-                                  child: Row(
-                                    children: <Widget>[
-                                      IconButton(
-                                        icon: Icon(Icons.edit),
-                                        onPressed: () async {
-                                          await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  AddProductScreen(
-                                                editProduct:
-                                                    _visibleProducts[index],
-                                              ),
+                              leading: CircleAvatar(
+                                backgroundImage: NetworkImage(
+                                    _visibleProducts[index].imageUrl),
+                              ),
+                              title: Text(_visibleProducts[index].productName),
+                              trailing: Container(
+                                width: MediaQuery.of(context).size.width * .27,
+                                child: Row(
+                                  children: <Widget>[
+                                    IconButton(
+                                      icon: Icon(Icons.edit),
+                                      onPressed: () async {
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                AddProductScreen(
+                                              editProduct:
+                                                  _visibleProducts[index],
                                             ),
-                                          );
-                                          getAllProducts();
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete),
-                                        color: Theme.of(context).errorColor,
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) {
-                                              return AlertDialog(
-                                                title: Text('Warning'),
-                                                content: Text(
-                                                  'Are you sure to delete the product??',
+                                          ),
+                                        );
+                                        getAllProducts();
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete),
+                                      color: Theme.of(context).errorColor,
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) {
+                                            return AlertDialog(
+                                              title: Text('Warning'),
+                                              content: Text(
+                                                'Are you sure to delete the product??',
+                                              ),
+                                              actions: <Widget>[
+                                                FlatButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context)
+                                                        .pop(false);
+                                                  },
+                                                  child: Text('No'),
                                                 ),
-                                                actions: <Widget>[
-                                                  FlatButton(
-                                                    onPressed: () {
-                                                      Navigator.of(context)
-                                                          .pop(false);
-                                                    },
-                                                    child: Text('No'),
-                                                  ),
-                                                  FlatButton(
-                                                    onPressed: () {
-                                                      String prodId =
-                                                          _visibleProducts[
-                                                                  index]
-                                                              .id;
-                                                      _productsRef
-                                                          .doc(
-                                                            prodId,
-                                                          )
+                                                FlatButton(
+                                                  onPressed: () {
+                                                    String prodId =
+                                                        _visibleProducts[index]
+                                                            .id;
+                                                    _productsRef
+                                                        .doc(
+                                                          prodId,
+                                                        )
+                                                        .delete()
+                                                        .then((value) async {
+                                                      storageReference
+                                                          .child(
+                                                              'products/product_$prodId.jpg')
                                                           .delete()
-                                                          .then((value) async {
-                                                        storageReference
-                                                            .child(
-                                                                'products/product_$prodId.jpg')
-                                                            .delete()
-                                                            .then((value) {});
-                                                        setState(() {
-                                                          _productsRef =
-                                                              FirebaseFirestore
-                                                                  .instance
-                                                                  .collection(
-                                                                      'products');
-                                                          getAllProducts();
-                                                        });
+                                                          .then((value) {});
+                                                      setState(() {
+                                                        _productsRef =
+                                                            FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                    'products');
+                                                        getAllProducts();
                                                       });
-                                                      Navigator.of(context)
-                                                          .pop(true);
-                                                    },
-                                                    child: Text('Yes'),
-                                                  ),
-                                                ],
-                                              );
-                                            },
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ));
+                                                    });
+                                                    Navigator.of(context)
+                                                        .pop(true);
+                                                  },
+                                                  child: Text('Yes'),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
                           },
                           itemCount: _visibleProducts.length,
                         ),
