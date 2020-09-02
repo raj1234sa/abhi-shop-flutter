@@ -3,6 +3,7 @@ import 'package:abhi_shop/screens/add_product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 final StorageReference storageReference = FirebaseStorage.instance.ref();
 
@@ -24,25 +25,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   void initState() {
-    getAllProducts();
     setState(() {
-      _loading = false;
+      _loading = true;
     });
+    getAllProducts();
     super.initState();
   }
 
   Future<void> getAllProducts() async {
-     _productsRef.get().then((value) {
+    _productsRef.get().then((value) {
+      _allProducts = value.docs
+          .map(
+            (e) => Product.fromJson(e),
+          )
+          .toList();
+      _visibleProducts = _allProducts;
+      if (_visibleProducts.isEmpty) {
+        _noProducts = true;
+      }
       setState(() {
-        _allProducts = value.docs
-            .map(
-              (e) => Product.fromJson(e),
-            )
-            .toList();
-        _visibleProducts = _allProducts;
-        if (_visibleProducts.isEmpty) {
-          _noProducts = true;
-        }
+        _loading = false;
       });
     });
   }
@@ -77,7 +79,94 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ],
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator())
+          ? Shimmer.fromColors(
+              period: Duration(seconds: 2),
+              baseColor: Colors.grey[100],
+              highlightColor: Colors.grey[400],
+              direction: ShimmerDirection.rtl,
+              child: Container(
+                padding: EdgeInsets.all(12.0),
+                child: ListView(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(5.0),
+                          child: IconButton(
+                            onPressed: null,
+                            icon :Icon(Icons.search,size: 30.0,),
+                            color: Colors.white,
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.symmetric(
+                              vertical: 15.0,
+                              horizontal: 15.0,
+                            ),
+                            height: 30,
+                            color: Colors.white,
+                          ),
+                        )
+                      ],
+                    ),
+                    ...List.generate(6, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 24.0,
+                              backgroundColor: Colors.white,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 2.0),
+                                  ),
+                                  Container(
+                                    width: double.infinity,
+                                    height: 8.0,
+                                    color: Colors.white,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 3.0),
+                                  ),
+                                  Container(
+                                    width: double.infinity,
+                                    height: 8.0,
+                                    color: Colors.white,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 3.0),
+                                  ),
+                                  Container(
+                                    width: 40.0,
+                                    height: 8.0,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    })
+                  ],
+                ),
+              ),
+            )
           : Column(
               children: <Widget>[
                 Padding(
@@ -155,7 +244,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                             return AlertDialog(
                                               title: Text('Warning'),
                                               content: Text(
-                                                'Are you sure to delete the product??',
+                                                'Are you sure to delete the ${_visibleProducts[index].productName} ?',
                                               ),
                                               actions: <Widget>[
                                                 FlatButton(
@@ -166,7 +255,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                                   child: Text('No'),
                                                 ),
                                                 FlatButton(
-                                                  onPressed: () {
+                                                  onPressed: () async {
                                                     String prodId =
                                                         _visibleProducts[index]
                                                             .id;

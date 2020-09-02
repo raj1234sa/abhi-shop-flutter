@@ -38,6 +38,8 @@ dependencies:
   path_provider: ^1.6.14
   network_to_file_image: ^2.3.2
   flutter_image_compress: ^0.7.0
+  shimmer: ^1.1.1
+
 
 dev_dependencies:
   flutter_test:
