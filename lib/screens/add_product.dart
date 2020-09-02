@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:abhi_shop/models/category.dart';
 import 'package:abhi_shop/models/product.dart';
 import 'package:abhi_shop/models/size_price.dart';
 import 'package:abhi_shop/widgets/icon_avatar.dart';
@@ -15,7 +16,10 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../models/product.dart';
 
-final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+final CollectionReference _productsRef =
+    FirebaseFirestore.instance.collection('products');
+final CollectionReference _categoriesRef =
+    FirebaseFirestore.instance.collection('categories');
 final StorageReference storageReference = FirebaseStorage.instance.ref();
 
 class AddProductScreen extends StatefulWidget {
@@ -41,7 +45,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
   File _imageFile;
   bool _loading = false;
   Directory tempDir;
+  String appHeading;
+  var selectedCategory;
 
+  List<DropdownMenuItem> _categoriesList = [];
 
   List<ProductSizePrice> _productSizePriceList = [
     ProductSizePrice(
@@ -100,11 +107,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         isHotProduct: _isHotProduct,
         isNewArrival: _isNewArrival,
         imageUrl: mediaUrl,
+        categoryId: selectedCategory,
       );
-      await _firestore
-          .collection('products')
-          .doc(productId)
-          .set(product.toJson());
+      await _productsRef.doc(productId).set(product.toJson());
       Toast.show(
         widget.editProduct == null
             ? 'Product is added!!'
@@ -117,6 +122,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
     setState(() {
       _loading = false;
+    });
+  }
+
+  Future<void> getCategory() async {
+    _categoriesRef.get().then((QuerySnapshot value) {
+      setState(() {
+        _categoriesList = value.docs.map((cat) {
+          Category category = Category.fromJson(cat);
+          return DropdownMenuItem(
+            child: Text(category.name),
+            value: category.id,
+          );
+        }).toList();
+        selectedCategory = widget.editProduct == null
+            ? _categoriesList[0].value
+            : widget.editProduct.categoryId;
+      });
     });
   }
 
@@ -149,56 +171,55 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   void showImagePickerOption(BuildContext ctx) {
     showModalBottomSheet(
-        context: ctx,
-        builder: (_) {
-          return GestureDetector(
-            onTap: () {},
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              height: 80,
-              margin: EdgeInsets.all(25),
-              child: Row(
-                children: [
-                  IconAvatar(
-                    color: Colors.lightBlue,
-                    icon: Icons.camera_alt,
-                    name: 'Camera',
-                    onPress: () {
-                      Navigator.of(context).pop();
-                      _takePicture(ImageSource.camera);
-                    },
-                  ),
-                  IconAvatar(
-                    color: Colors.teal,
-                    icon: Icons.image,
-                    name: 'Gallery',
-                    onPress: () {
-                      Navigator.of(context).pop();
-
-                      _takePicture(ImageSource.gallery);
-                    },
-                  ),
-                  IconAvatar(
-                    color: Colors.redAccent,
-                    icon: Icons.clear,
-                    name: 'Clear',
-                    onPress: () {
-                      setState(() {
-                        _imageFile = null;
-                      });
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              ),
+      context: ctx,
+      builder: (_) {
+        return GestureDetector(
+          onTap: () {},
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            height: 80,
+            margin: EdgeInsets.all(25),
+            child: Row(
+              children: [
+                IconAvatar(
+                  color: Colors.lightBlue,
+                  icon: Icons.camera_alt,
+                  name: 'Camera',
+                  onPress: () {
+                    Navigator.of(context).pop();
+                    _takePicture(ImageSource.camera);
+                  },
+                ),
+                IconAvatar(
+                  color: Colors.teal,
+                  icon: Icons.image,
+                  name: 'Gallery',
+                  onPress: () {
+                    Navigator.of(context).pop();
+                    _takePicture(ImageSource.gallery);
+                  },
+                ),
+                IconAvatar(
+                  color: Colors.redAccent,
+                  icon: Icons.clear,
+                  name: 'Clear',
+                  onPress: () {
+                    setState(() {
+                      _imageFile = null;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
             ),
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 
-  Future<void> initializeData()async{
-    tempDir=await getTemporaryDirectory();
-
+  Future<void> initializeData() async {
+    tempDir = await getTemporaryDirectory();
     productId = widget.editProduct == null
         ? DateTime.now().millisecondsSinceEpoch.toString()
         : widget.editProduct.id;
@@ -210,12 +231,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _productSizePriceList = widget.editProduct.sizePrices
           .map(
             (sizePriceJson) => ProductSizePrice.fromJSON(sizePriceJson),
-      )
+          )
           .toList();
       _isHotProduct = widget.editProduct.isHotProduct;
       _isNewArrival = widget.editProduct.isNewArrival;
-      File _fileImage = await convertUriToFile(url: widget.editProduct.imageUrl);
-      if(_fileImage != null){
+      File _fileImage =
+          await convertUriToFile(url: widget.editProduct.imageUrl);
+      if (_fileImage != null) {
         print('this is file image : ${_fileImage.path}');
         setState(() {
           _imageFile = _fileImage;
@@ -227,13 +249,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   void initState() {
+    getCategory();
     initializeData();
     super.initState();
   }
 
   Future<File> convertUriToFile({String url}) async {
-
-    File file = new File('${tempDir.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg');
+    File file = new File(
+        '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg');
     http.Response response = await http.get(url);
     File networkImage = await file.writeAsBytes(response.bodyBytes);
     return networkImage;
@@ -244,7 +267,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     var width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        title: Text("Add Product"),
+        title:
+            Text((widget.editProduct == null) ? 'Add Product' : 'Edit Product'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.save),
@@ -307,6 +331,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         FocusScope.of(context).requestFocus(
                             _productSizePriceList[0].sizeNameFocusNode);
                       },
+                    ),
+                    Container(
+                      padding: EdgeInsets.only(top: 10),
+                      child: DropdownButton(
+                        items: _categoriesList,
+                        value: selectedCategory,
+                        isExpanded: true,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCategory = value;
+                          });
+                        },
+                      ),
                     ),
                     ..._productSizePriceList.map((productSizePrice) {
                       int index =

@@ -1,5 +1,7 @@
+import 'package:abhi_shop/models/category.dart';
 import 'package:abhi_shop/models/product.dart';
 import 'package:abhi_shop/screens/add_product.dart';
+import 'package:abhi_shop/screens/category_list.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -16,9 +18,12 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   CollectionReference _productsRef =
-      FirebaseFirestore.instance.collection('products');
+  FirebaseFirestore.instance.collection('products');
+  final CollectionReference _categoriesRef =
+  FirebaseFirestore.instance.collection('categories');
   List<Product> _allProducts = [];
   List<Product> _visibleProducts = [];
+  List<Category> _categoriesList = [];
   final _productSearchController = TextEditingController();
   bool _loading = true;
   bool _noProducts = false;
@@ -33,6 +38,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Future<void> getAllProducts() async {
+    await getCategory();
     _productsRef.get().then((value) {
       _allProducts = value.docs
           .map(
@@ -45,6 +51,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
       }
       setState(() {
         _loading = false;
+      });
+    });
+  }
+
+  Future<void> getCategory() async {
+    _categoriesRef.get().then((QuerySnapshot value) {
+      setState(() {
+        _categoriesList = value.docs.map((cat) => Category.fromJson(cat)).toList();
       });
     });
   }
@@ -67,6 +81,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: Container(
+          child: SafeArea(
+            child: Column(
+              children: <Widget>[
+                ListTile(
+                  title: Text('Products'),
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.of(context)
+                        .pushReplacementNamed(ProductListScreen.ROUTE_NAME);
+                  },
+                ),
+                ListTile(
+                  title: Text('Categories'),
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.of(context)
+                        .pushReplacementNamed(CategoryListScreen.ROUTE_NAME);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       appBar: AppBar(
         title: Text('Product List'),
         actions: <Widget>[
@@ -200,24 +240,25 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
                 if (_visibleProducts.length > 0)
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        FocusScope.of(context).unfocus();
-                      },
-                      child: ListView.builder(
-                        itemBuilder: (context, index) {
-                          return ListTile(
+                    child: RefreshIndicator(
+                      onRefresh: () => getAllProducts(),
+                      child: GestureDetector(
+                        onTap: () {
+                          FocusScope.of(context).unfocus();
+                        },
+                        child: ListView.builder(
+                          itemBuilder: (context, index) {
+                            return ListTile(
                               leading: CircleAvatar(
-                                  backgroundImage: NetworkImage(
-                                      _visibleProducts[index].imageUrl)),
-                              title: Text(_visibleProducts[index].productName),
-                              subtitle: Text(
-                                "",
+                                backgroundImage: NetworkImage(
+                                    _visibleProducts[index].imageUrl),
                               ),
+                              title: Text(_visibleProducts[index].productName),
+                              subtitle: Text(_categoriesList.firstWhere((element) => _visibleProducts[index].categoryId == element.id).getCategoryName()),
                               trailing: Container(
                                 width: MediaQuery.of(context).size.width * .27,
                                 child: Row(
-                                  children: <Widget>[
+                                  children: <Widget>[ 
                                     IconButton(
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
@@ -292,9 +333,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                     ),
                                   ],
                                 ),
-                              ));
-                        },
-                        itemCount: _visibleProducts.length,
+                              ),
+                            );
+                          },
+                          itemCount: _visibleProducts.length,
+                        ),
                       ),
                     ),
                   ),

@@ -8,6 +8,7 @@ class Product {
   final bool isNewArrival;
   final bool isHotProduct;
   final String imageUrl;
+  final String categoryId;
 
   Product({
     @required this.id,
@@ -15,6 +16,7 @@ class Product {
     @required this.sizePrices,
     @required this.isHotProduct,
     @required this.isNewArrival,
+    @required this.categoryId,
     this.imageUrl,
   });
 
@@ -24,7 +26,8 @@ class Product {
         sizePrices = json.data()['sizePrices'],
         isHotProduct = json.data()['isHotProduct'],
         imageUrl = json.data()['imageUrl'],
-        isNewArrival = json.data()['isNewArrival'];
+        isNewArrival = json.data()['isNewArrival'],
+        categoryId = json.data()['categoryId'];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -33,5 +36,6 @@ class Product {
         'isHotProduct': isHotProduct,
         'isNewArrival': isNewArrival,
         'imageUrl': imageUrl,
+        'categoryId': categoryId,
       };
 }
