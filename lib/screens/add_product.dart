@@ -73,7 +73,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
-  Future<String> uploadImage(imageFile) async {
+  Future<String> uploadImage(File imageFile) async {
     StorageUploadTask uploadTask = storageReference
         .child('products')
         .child('product_$productId.jpg')
