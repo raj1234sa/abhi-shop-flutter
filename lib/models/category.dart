@@ -18,8 +18,4 @@ class Category {
         'name': name,
         'imageUrl': imageUrl,
       };
-
-  String getCategoryName() {
-    return this.name;
-  }
 }

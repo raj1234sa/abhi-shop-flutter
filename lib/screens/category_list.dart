@@ -137,11 +137,10 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                                               )
                                               .delete()
                                               .then((value) async {
-                                            storageReference
+                                            await storageReference
                                                 .child(
                                                     'categories/category_$catId.jpg')
-                                                .delete()
-                                                .then((value) {});
+                                                .delete();
                                             setState(() {
                                               _categoryRef = FirebaseFirestore
                                                   .instance

@@ -18,9 +18,9 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   CollectionReference _productsRef =
-  FirebaseFirestore.instance.collection('products');
+      FirebaseFirestore.instance.collection('products');
   final CollectionReference _categoriesRef =
-  FirebaseFirestore.instance.collection('categories');
+      FirebaseFirestore.instance.collection('categories');
   List<Product> _allProducts = [];
   List<Product> _visibleProducts = [];
   List<Category> _categoriesList = [];
@@ -58,7 +58,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Future<void> getCategory() async {
     _categoriesRef.get().then((QuerySnapshot value) {
       setState(() {
-        _categoriesList = value.docs.map((cat) => Category.fromJson(cat)).toList();
+        _categoriesList =
+            value.docs.map((cat) => Category.fromJson(cat)).toList();
       });
     });
   }
@@ -71,7 +72,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
     } else {
       setState(() {
         _visibleProducts = _allProducts
-            .where((e) => e.productName.contains(_productSearchController.text))
+            .where((e) => e.productName
+                .toLowerCase()
+                .contains(_productSearchController.text))
             .toList();
         print(_visibleProducts.length);
       });
@@ -134,7 +137,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           padding: EdgeInsets.all(5.0),
                           child: IconButton(
                             onPressed: null,
-                            icon :Icon(Icons.search,size: 30.0,),
+                            icon: Icon(
+                              Icons.search,
+                              size: 30.0,
+                            ),
                             color: Colors.white,
                           ),
                         ),
@@ -254,11 +260,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                     _visibleProducts[index].imageUrl),
                               ),
                               title: Text(_visibleProducts[index].productName),
-                              subtitle: Text(_categoriesList.firstWhere((element) => _visibleProducts[index].categoryId == element.id).getCategoryName()),
+                              subtitle: Text(_categoriesList
+                                  .firstWhere((element) =>
+                                      _visibleProducts[index].categoryId ==
+                                      element.id)
+                                  .name),
                               trailing: Container(
                                 width: MediaQuery.of(context).size.width * .27,
                                 child: Row(
-                                  children: <Widget>[ 
+                                  children: <Widget>[
                                     IconButton(
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
