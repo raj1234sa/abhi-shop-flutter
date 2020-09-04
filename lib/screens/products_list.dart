@@ -2,6 +2,7 @@ import 'package:abhi_shop/models/category.dart';
 import 'package:abhi_shop/models/product.dart';
 import 'package:abhi_shop/screens/add_product.dart';
 import 'package:abhi_shop/screens/category_list.dart';
+import 'package:abhi_shop/widgets/drawer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +77,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 .toLowerCase()
                 .contains(_productSearchController.text))
             .toList();
-        print(_visibleProducts.length);
       });
     }
   }
@@ -84,32 +84,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
-        child: Container(
-          child: SafeArea(
-            child: Column(
-              children: <Widget>[
-                ListTile(
-                  title: Text('Products'),
-                  onTap: () {
-                    FocusScope.of(context).unfocus();
-                    Navigator.of(context)
-                        .pushReplacementNamed(ProductListScreen.ROUTE_NAME);
-                  },
-                ),
-                ListTile(
-                  title: Text('Categories'),
-                  onTap: () {
-                    FocusScope.of(context).unfocus();
-                    Navigator.of(context)
-                        .pushReplacementNamed(CategoryListScreen.ROUTE_NAME);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      drawer: MainDrawer(),
       appBar: AppBar(
         title: Text('Product List'),
         actions: <Widget>[

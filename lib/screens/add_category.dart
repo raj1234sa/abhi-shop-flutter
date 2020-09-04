@@ -51,7 +51,9 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
       );
       await _categoryRef.doc(_categoryId).set(category.toJson());
       Toast.show(
-        'Category is added!!',
+        widget.editProduct == null
+            ? 'Category is added!!'
+            : 'Category is updated!!',
         context,
         duration: Toast.LENGTH_LONG + 5,
         backgroundColor: Colors.green,
@@ -141,6 +143,14 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
     }
   }
 
+  Future<File> convertUriToFile({String url}) async {
+    File file = new File(
+        '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg');
+    http.Response response = await http.get(url);
+    File networkImage = await file.writeAsBytes(response.bodyBytes);
+    return networkImage;
+  }
+
   Future<void> initializeData() async {
     tempDir = await getTemporaryDirectory();
     setState(() {
@@ -163,14 +173,6 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  Future<File> convertUriToFile({String url}) async {
-    File file = new File(
-        '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.jpg');
-    http.Response response = await http.get(url);
-    File networkImage = await file.writeAsBytes(response.bodyBytes);
-    return networkImage;
   }
 
   @override

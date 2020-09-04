@@ -1,30 +1,28 @@
-import 'package:abhi_shop/models/category.dart';
-import 'package:abhi_shop/screens/add_category.dart';
-import 'package:abhi_shop/screens/products_list.dart';
+import 'package:abhi_shop/screens/add_slider.dart';
 import 'package:abhi_shop/widgets/drawer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:abhi_shop/models/slider.dart' as slider;
 
-final StorageReference storageReference = FirebaseStorage.instance.ref();
-
-class CategoryListScreen extends StatefulWidget {
-  static final String ROUTE_NAME = "category_list_screen";
+class SlidersListScreen extends StatefulWidget {
+  static const ROUTE_NAME = 'sliders_list_screen';
   @override
-  _CategoryListScreenState createState() => _CategoryListScreenState();
+  _SlidersListScreenState createState() => _SlidersListScreenState();
 }
 
-class _CategoryListScreenState extends State<CategoryListScreen> {
-  CollectionReference _categoryRef =
-      FirebaseFirestore.instance.collection('categories');
-  List<Category> _categoryList = [];
+class _SlidersListScreenState extends State<SlidersListScreen> {
+  StorageReference storageReference = FirebaseStorage.instance.ref();
+  CollectionReference _sliderRef =
+      FirebaseFirestore.instance.collection('sliders');
   bool _isLoading = true;
+  List<slider.Slider> _slidersList = [];
 
-  Future<void> getAllCategories() async {
-    _categoryRef.get().then((value) {
+  Future<void> getAllSliders() async {
+    _sliderRef.get().then((value) {
       setState(() {
-        _categoryList =
-            value.docs.map((cat) => Category.fromJson(cat)).toList();
+        _slidersList =
+            value.docs.map((e) => slider.Slider.fromJson(e)).toList();
       });
     }).then((value) {
       setState(() {
@@ -35,7 +33,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
 
   @override
   void initState() {
-    getAllCategories();
+    getAllSliders();
     super.initState();
   }
 
@@ -44,30 +42,29 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
     return Scaffold(
       drawer: MainDrawer(),
       appBar: AppBar(
-        title: Text("Categories"),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
-              Navigator.pushNamed(context, AddCategoryScreen.ROUTE_NAME);
+              Navigator.pushNamed(context, AddSliderScreen.ROUTE_NAME);
             },
-            tooltip: 'Add Category',
           ),
         ],
+        title: Text('Sliders List'),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () => getAllCategories(),
+              onRefresh: () => getAllSliders(),
               child: Container(
                 child: ListView.builder(
                   itemBuilder: (context, index) {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundImage:
-                            NetworkImage(_categoryList[index].imageUrl),
+                            NetworkImage(_slidersList[index].imageUrl),
                       ),
-                      title: Text(_categoryList[index].name),
+                      title: Text(_slidersList[index].name),
                       trailing: Container(
                         width: MediaQuery.of(context).size.width * .27,
                         child: Row(
@@ -78,12 +75,12 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                                 await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => AddCategoryScreen(
-                                      editProduct: _categoryList[index],
+                                    builder: (context) => AddSliderScreen(
+                                      editSlider: _slidersList[index],
                                     ),
                                   ),
                                 );
-                                getAllCategories();
+                                getAllSliders();
                               },
                             ),
                             IconButton(
@@ -96,7 +93,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                                     return AlertDialog(
                                       title: Text('Warning'),
                                       content: Text(
-                                        'Are you sure to delete the category??',
+                                        'Are you sure to delete the slider??',
                                       ),
                                       actions: <Widget>[
                                         FlatButton(
@@ -107,23 +104,23 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                                         ),
                                         FlatButton(
                                           onPressed: () {
-                                            String catId =
-                                                _categoryList[index].id;
-                                            _categoryRef
+                                            String sliderId =
+                                                _slidersList[index].id;
+                                            _sliderRef
                                                 .doc(
-                                                  catId,
+                                                  sliderId,
                                                 )
                                                 .delete()
                                                 .then((value) async {
                                               await storageReference
                                                   .child(
-                                                      'categories/category_$catId.jpg')
+                                                      'sliders/slider_$sliderId.jpg')
                                                   .delete();
                                               setState(() {
-                                                _categoryRef = FirebaseFirestore
+                                                _sliderRef = FirebaseFirestore
                                                     .instance
-                                                    .collection('categories');
-                                                getAllCategories();
+                                                    .collection('sliders');
+                                                getAllSliders();
                                               });
                                             });
                                             Navigator.of(context).pop(true);
@@ -141,7 +138,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                       ),
                     );
                   },
-                  itemCount: _categoryList.length,
+                  itemCount: _slidersList.length,
                 ),
               ),
             ),

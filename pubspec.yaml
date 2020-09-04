@@ -39,7 +39,8 @@ dependencies:
   network_to_file_image: ^2.3.2
   flutter_image_compress: ^0.7.0
   shimmer: ^1.1.1
-
+  bloc: ^6.0.3
+  flutter_bloc: ^6.0.4
 
 dev_dependencies:
   flutter_test:
