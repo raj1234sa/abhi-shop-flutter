@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:abhi_shop/models/slider.dart' as slider;
+import 'package:abhi_shop/providers/slider_provider.dart';
 import 'package:abhi_shop/widgets/icon_avatar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -9,6 +10,7 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:toast/toast.dart';
 
 class AddSliderScreen extends StatefulWidget {
@@ -30,18 +32,24 @@ class _AddSliderScreenState extends State<AddSliderScreen> {
   File _imageFile;
   Directory tempDir;
 
-  TextEditingController nameController = TextEditingController();
+  String _sliderForSelected = 'c';
+  List<DropdownMenuItem> _sliderForList = [
+    DropdownMenuItem(
+      child: Text(
+        'For Category',
+      ),
+      value: 'c',
+    ),
+    DropdownMenuItem(
+      child: Text(
+        'For Product',
+      ),
+      value: 'p',
+    ),
+  ];
 
-  Future<String> uploadImage(imageFile) async {
-    StorageUploadTask uploadTask = storageReference
-        .child('sliders')
-        .child('slider_$_sliderId.jpg')
-        .putFile(imageFile);
-
-    StorageTaskSnapshot storageTaskSnapshot = await uploadTask.onComplete;
-    String downloadUrl = await storageTaskSnapshot.ref.getDownloadURL();
-    return downloadUrl;
-  }
+  TextEditingController _nameController = TextEditingController();
+  TextEditingController _idController = TextEditingController();
 
   void showImagePickerOption(BuildContext ctx) {
     showModalBottomSheet(
@@ -119,33 +127,40 @@ class _AddSliderScreenState extends State<AddSliderScreen> {
   }
 
   Future<void> _saveForm(BuildContext context) async {
-    if (_imageFile == null) {
-      Toast.show(
-        'Image must be uploaded',
-        context,
-        duration: Toast.LENGTH_LONG + 3,
-        backgroundColor: Colors.red,
-      );
-      return;
-    }
     setState(() {
       _isLoading = true;
     });
-    FocusScope.of(context).unfocus();
-    String imageUrl = await uploadImage(_imageFile);
-    slider.Slider sliderObj = slider.Slider(
-      id: _sliderId,
-      imageUrl: imageUrl,
-      name: nameController.text,
-    );
-    await _sliderRef.doc(_sliderId).set(sliderObj.toJson());
-    Toast.show(
-      widget.editSlider == null ? 'Slider is added!!' : 'Slider is updated!!',
-      context,
-      duration: Toast.LENGTH_LONG + 5,
-      backgroundColor: Colors.green,
-    );
-    Navigator.pop(context);
+    bool formValid = _formKey.currentState.validate();
+    if (formValid) {
+      final slidersProvider =
+          Provider.of<SliderProvider>(context, listen: false);
+      if (_imageFile == null) {
+        Toast.show(
+          'Image must be uploaded',
+          context,
+          duration: Toast.LENGTH_LONG + 3,
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+      FocusScope.of(context).unfocus();
+      String imageUrl =
+          await slidersProvider.uploadImage(_imageFile, _sliderId);
+      slider.Slider sliderObj = slider.Slider(
+        sliderFor: _sliderForSelected + '_' + _idController.text,
+        id: _sliderId,
+        imageUrl: imageUrl,
+        name: _nameController.text,
+      );
+      await slidersProvider.addEditSlider(slider: sliderObj);
+      Toast.show(
+        widget.editSlider == null ? 'Slider is added!!' : 'Slider is updated!!',
+        context,
+        duration: Toast.LENGTH_LONG + 5,
+        backgroundColor: Colors.green,
+      );
+      Navigator.pop(context);
+    }
     setState(() {
       _isLoading = false;
     });
@@ -162,7 +177,9 @@ class _AddSliderScreenState extends State<AddSliderScreen> {
       tempDir = await getTemporaryDirectory();
       File image = await convertUriToFile(url: widget.editSlider.imageUrl);
       _imageFile = image;
-      nameController.text = widget.editSlider.name;
+      _nameController.text = widget.editSlider.name;
+      _sliderForSelected = widget.editSlider.sliderFor.split('_')[0];
+      _idController.text = widget.editSlider.sliderFor.split('_')[1];
     }
     setState(() {
       _isLoading = false;
@@ -180,7 +197,7 @@ class _AddSliderScreenState extends State<AddSliderScreen> {
     var width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.editSlider == null ? 'Add Sldier' : 'Edit Slider'),
+        title: Text(widget.editSlider == null ? 'Add Slider' : 'Edit Slider'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.save),
@@ -228,7 +245,7 @@ class _AddSliderScreenState extends State<AddSliderScreen> {
                       ),
                     ),
                     TextFormField(
-                      controller: nameController,
+                      controller: _nameController,
                       decoration: InputDecoration(
                         labelText: 'Name',
                       ),
@@ -237,10 +254,60 @@ class _AddSliderScreenState extends State<AddSliderScreen> {
                         _saveForm(context);
                       },
                     ),
+                    Container(
+                      margin: EdgeInsets.only(top: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Onclick redirect to',
+                            style: TextStyle(
+                              fontSize: 16,
+                            ),
+                          ),
+                          DropdownButton(
+                            items: _sliderForList,
+                            isExpanded: true,
+                            value: _sliderForSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                _sliderForSelected = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextFormField(
+                      decoration: InputDecoration(
+                        hintText: (_sliderForSelected == 'p')
+                            ? 'Product ID'
+                            : 'Category ID',
+                      ),
+                      controller: _idController,
+                      validator: (value) {
+                        if (value.isEmpty) {
+                          return (_sliderForSelected == 'p')
+                              ? 'Product ID is required'
+                              : 'Category ID is required';
+                        }
+                        return null;
+                      },
+                      focusNode: NoKeyboardEditableTextFocusNode(),
+                    ),
                   ],
                 ),
               ),
             ),
     );
+  }
+}
+
+class NoKeyboardEditableTextFocusNode extends FocusNode {
+  @override
+  bool get hasFocus => false;
+  @override
+  bool consumeKeyboardToken() {
+    return false;
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:abhi_shop/models/category.dart';
+import 'package:abhi_shop/providers/category_provider.dart';
 import 'package:abhi_shop/widgets/icon_avatar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -9,6 +10,7 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:toast/toast.dart';
 
 final StorageReference storageReference = FirebaseStorage.instance.ref();
@@ -43,13 +45,16 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
       setState(() {
         _isLoading = true;
       });
-      String mediaUrl = await uploadImage(_imageFile);
+      final categoriesProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
+      String mediaUrl =
+          await categoriesProvider.uploadImage(_imageFile, _categoryId);
       Category category = Category(
         id: _categoryId,
         name: _categoryNameController.text,
         imageUrl: mediaUrl,
       );
-      await _categoryRef.doc(_categoryId).set(category.toJson());
+      await categoriesProvider.addEditCategory(category: category);
       Toast.show(
         widget.editProduct == null
             ? 'Category is added!!'

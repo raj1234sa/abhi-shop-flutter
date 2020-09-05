@@ -1,46 +1,29 @@
 import 'package:abhi_shop/models/category.dart';
+import 'package:abhi_shop/providers/category_provider.dart';
 import 'package:abhi_shop/screens/add_category.dart';
-import 'package:abhi_shop/screens/products_list.dart';
 import 'package:abhi_shop/widgets/drawer.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 final StorageReference storageReference = FirebaseStorage.instance.ref();
 
-class CategoryListScreen extends StatefulWidget {
+class CategoryListScreen extends StatelessWidget {
   static final String ROUTE_NAME = "category_list_screen";
-  @override
-  _CategoryListScreenState createState() => _CategoryListScreenState();
-}
 
-class _CategoryListScreenState extends State<CategoryListScreen> {
-  CollectionReference _categoryRef =
-      FirebaseFirestore.instance.collection('categories');
-  List<Category> _categoryList = [];
-  bool _isLoading = true;
-
-  Future<void> getAllCategories() async {
-    _categoryRef.get().then((value) {
-      setState(() {
-        _categoryList =
-            value.docs.map((cat) => Category.fromJson(cat)).toList();
-      });
-    }).then((value) {
-      setState(() {
-        _isLoading = false;
-      });
-    });
-  }
-
-  @override
-  void initState() {
-    getAllCategories();
-    super.initState();
+  Future<void> refreshCategories(BuildContext context) async {
+    Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    ).setCategories();
   }
 
   @override
   Widget build(BuildContext context) {
+    final categoriesProvider = Provider.of<CategoryProvider>(context);
+    categoriesProvider.setCategories();
+    final categoryList = categoriesProvider.items;
     return Scaffold(
       drawer: MainDrawer(),
       appBar: AppBar(
@@ -55,96 +38,94 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => getAllCategories(),
-              child: Container(
-                child: ListView.builder(
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage:
-                            NetworkImage(_categoryList[index].imageUrl),
-                      ),
-                      title: Text(_categoryList[index].name),
-                      trailing: Container(
-                        width: MediaQuery.of(context).size.width * .27,
-                        child: Row(
-                          children: <Widget>[
-                            IconButton(
-                              icon: Icon(Icons.edit),
-                              onPressed: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => AddCategoryScreen(
-                                      editProduct: _categoryList[index],
-                                    ),
-                                  ),
-                                );
-                                getAllCategories();
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              color: Theme.of(context).errorColor,
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text('Warning'),
-                                      content: Text(
-                                        'Are you sure to delete the category??',
-                                      ),
-                                      actions: <Widget>[
-                                        FlatButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(false);
-                                          },
-                                          child: Text('No'),
-                                        ),
-                                        FlatButton(
-                                          onPressed: () {
-                                            String catId =
-                                                _categoryList[index].id;
-                                            _categoryRef
-                                                .doc(
-                                                  catId,
-                                                )
-                                                .delete()
-                                                .then((value) async {
-                                              await storageReference
-                                                  .child(
-                                                      'categories/category_$catId.jpg')
-                                                  .delete();
-                                              setState(() {
-                                                _categoryRef = FirebaseFirestore
-                                                    .instance
-                                                    .collection('categories');
-                                                getAllCategories();
-                                              });
-                                            });
-                                            Navigator.of(context).pop(true);
-                                          },
-                                          child: Text('Yes'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                  itemCount: _categoryList.length,
+      body: RefreshIndicator(
+        onRefresh: () => refreshCategories(context),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: ListView.builder(
+            itemBuilder: (context, index) {
+              Category cat = categoryList[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: NetworkImage(cat.imageUrl),
                 ),
-              ),
-            ),
+                title: Text(cat.name),
+                trailing: Container(
+                  width: MediaQuery.of(context).size.width * .40,
+                  child: Row(
+                    children: <Widget>[
+                      IconButton(
+                        tooltip: 'Copy ID',
+                        icon: Icon(Icons.content_copy),
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: cat.id),
+                          );
+                          Scaffold.of(context).hideCurrentSnackBar();
+                          Scaffold.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text('Category ID is copied to clipboard.'),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddCategoryScreen(
+                                editProduct: cat,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        color: Theme.of(context).errorColor,
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: Text('Warning'),
+                                content: Text(
+                                  'Are you sure to delete the category??',
+                                ),
+                                actions: <Widget>[
+                                  FlatButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop(false);
+                                    },
+                                    child: Text('No'),
+                                  ),
+                                  FlatButton(
+                                    onPressed: () async {
+                                      await categoriesProvider.deleteCategory(
+                                        id: cat.id,
+                                      );
+                                      Navigator.of(context).pop(true);
+                                    },
+                                    child: Text('Yes'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            itemCount: categoryList.length,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:abhi_shop/models/category.dart';
 import 'package:abhi_shop/models/product.dart';
 import 'package:abhi_shop/models/size_price.dart';
+import 'package:abhi_shop/providers/product_provider.dart';
 import 'package:abhi_shop/widgets/icon_avatar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -10,17 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:toast/toast.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-
-import '../models/product.dart';
-
-final CollectionReference _productsRef =
-    FirebaseFirestore.instance.collection('products');
-final CollectionReference _categoriesRef =
-    FirebaseFirestore.instance.collection('categories');
-final StorageReference storageReference = FirebaseStorage.instance.ref();
 
 class AddProductScreen extends StatefulWidget {
   static final ROUTE_NAME = 'add_product_screen';
@@ -33,6 +27,11 @@ class AddProductScreen extends StatefulWidget {
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
+  final CollectionReference _productsRef =
+      FirebaseFirestore.instance.collection('products');
+  final CollectionReference _categoriesRef =
+      FirebaseFirestore.instance.collection('categories');
+  final StorageReference storageReference = FirebaseStorage.instance.ref();
   final _formKey = GlobalKey<FormState>();
 
   final _prodNameController = TextEditingController();
@@ -80,18 +79,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
-  Future<String> uploadImage(File imageFile) async {
-    StorageUploadTask uploadTask = storageReference
-        .child('products')
-        .child('product_$productId.jpg')
-        .putFile(imageFile);
-
-    StorageTaskSnapshot storageTaskSnapshot = await uploadTask.onComplete;
-    String downloadUrl = await storageTaskSnapshot.ref.getDownloadURL();
-    return downloadUrl;
-  }
-
   Future<void> _saveForm(BuildContext context) async {
+    final productsProvider =
+        Provider.of<ProductProvider>(context, listen: false);
     setState(() {
       _loading = true;
     });
@@ -99,7 +89,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (isValidForm) {
       FocusScope.of(context).unfocus();
       // await compressImage(_imageFile);
-      String mediaUrl = await uploadImage(_imageFile);
+      String mediaUrl =
+          await productsProvider.uploadImage(_imageFile, productId);
       Product product = Product(
         id: productId,
         productName: _prodNameController.text,
@@ -109,7 +100,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         imageUrl: mediaUrl,
         categoryId: selectedCategory,
       );
-      await _productsRef.doc(productId).set(product.toJson());
+      productsProvider.addEditProduct(product: product);
       Toast.show(
         widget.editProduct == null
             ? 'Product is added!!'
