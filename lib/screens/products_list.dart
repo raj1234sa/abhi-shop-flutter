@@ -6,21 +6,100 @@ import 'package:abhi_shop/widgets/drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProductListScreen extends StatelessWidget {
   static final ROUTE_NAME = 'products_list_screen';
   final _productSearchController = TextEditingController();
+  List<Map> popupMenuList = [
+    {
+      'name': 'Edit',
+      'icon': Icon(Icons.edit),
+      'value': 'edit',
+    },
+    {
+      'name': 'Copy ID',
+      'icon': Icon(Icons.content_copy),
+      'value': 'copyid',
+    },
+    {
+      'name': 'Delete',
+      'icon': Icon(
+        Icons.delete,
+        color: Colors.red,
+      ),
+      'value': 'delete',
+    },
+  ];
 
   Future<void> getAllProducts(BuildContext context) async {
     Provider.of<ProductProvider>(context, listen: false).setProducts();
+  }
+
+  void menuItemSelected(String selected, BuildContext context,
+      {product}) async {
+    switch (selected) {
+      case 'edit':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddProductScreen(
+              editProduct: product,
+            ),
+          ),
+        );
+        break;
+      case 'copyid':
+        Clipboard.setData(
+          ClipboardData(text: product.id),
+        );
+        Scaffold.of(context).hideCurrentSnackBar();
+        Scaffold.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Product ID is copied to clipboard.'),
+          ),
+        );
+        break;
+      case 'delete':
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Warning'),
+              content: Text(
+                'Are you sure to delete the product??',
+              ),
+              actions: <Widget>[
+                FlatButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text('No'),
+                ),
+                FlatButton(
+                  onPressed: () async {
+                    await Provider.of<ProductProvider>(
+                      context,
+                      listen: false,
+                    ).deleteProduct(
+                      id: product.id,
+                    );
+                    Navigator.of(context).pop(true);
+                  },
+                  child: Text('Yes'),
+                ),
+              ],
+            );
+          },
+        );
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final productsProvider = Provider.of<ProductProvider>(context);
     final categoriesProvider = Provider.of<CategoryProvider>(context);
-    productsProvider.setProducts();
-    categoriesProvider.setCategories();
     final productList = productsProvider.items;
     final categoryList = categoriesProvider.items;
     return Scaffold(
@@ -66,100 +145,67 @@ class ProductListScreen extends StatelessWidget {
               },
             ),
           ),
+          Text(
+            'Note: Background color indicates the status of product.',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[700],
+            ),
+          ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => getAllProducts(context),
-              child: GestureDetector(
-                onTap: () {
-                  FocusScope.of(context).unfocus();
-                },
-                child: ListView.builder(
-                  itemBuilder: (context, index) {
-                    Product prod = productList[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: NetworkImage(prod.imageUrl),
-                      ),
-                      title: Text(prod.productName),
-                      subtitle: Text(
-                        categoryList
-                            .firstWhere(
-                                (element) => element.id == prod.categoryId)
-                            .name,
-                      ),
-                      trailing: Container(
-                        width: MediaQuery.of(context).size.width * .41,
-                        child: Row(
-                          children: <Widget>[
-                            IconButton(
-                              tooltip: 'Copy ID',
-                              icon: Icon(Icons.content_copy),
-                              onPressed: () {
-                                Clipboard.setData(
-                                  ClipboardData(text: prod.id),
-                                );
-                                Scaffold.of(context).hideCurrentSnackBar();
-                                Scaffold.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Product ID is copied to clipboard.'),
-                                  ),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.edit),
-                              onPressed: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => AddProductScreen(
-                                      editProduct: prod,
-                                    ),
-                                  ),
-                                );
-                                getAllProducts(context);
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              color: Theme.of(context).errorColor,
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text('Warning'),
-                                      content: Text(
-                                        'Are you sure to delete the ${prod.productName} ?',
-                                      ),
-                                      actions: <Widget>[
-                                        FlatButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(false);
-                                          },
-                                          child: Text('No'),
-                                        ),
-                                        FlatButton(
-                                          onPressed: () async {
-                                            await productsProvider
-                                                .deleteProduct(id: prod.id);
-                                            Navigator.of(context).pop();
-                                          },
-                                          child: Text('Yes'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+            child: Container(
+              margin: EdgeInsets.only(top: 15),
+              child: RefreshIndicator(
+                onRefresh: () => getAllProducts(context),
+                child: GestureDetector(
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
                   },
-                  itemCount: productList.length,
+                  child: ListView.builder(
+                    itemBuilder: (context, index) {
+                      Product prod = productList[index];
+                      return Container(
+                        decoration: BoxDecoration(
+                          color:
+                              prod.status ? Colors.green[50] : Colors.red[50],
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: NetworkImage(prod.imageUrl),
+                          ),
+                          title: Text(prod.productName),
+                          subtitle: Text(
+                            categoryList
+                                .firstWhere(
+                                    (element) => element.id == prod.categoryId)
+                                .name,
+                          ),
+                          trailing: PopupMenuButton(
+                            onSelected: (value) {
+                              menuItemSelected(
+                                value,
+                                context,
+                                product: prod,
+                              );
+                            },
+                            itemBuilder: (context) => popupMenuList
+                                .map(
+                                  (menu) => PopupMenuItem(
+                                    child: ListTile(
+                                      leading: menu['icon'],
+                                      title: Text(menu['name']),
+                                      contentPadding: EdgeInsets.all(0),
+                                    ),
+                                    value: menu['value'],
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      );
+                    },
+                    itemCount: productList.length,
+                  ),
                 ),
               ),
             ),

@@ -6,10 +6,21 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 
 class SliderProvider with ChangeNotifier {
-  List<Slider> _sliders = [];
+  static List<Slider> _sliders = [];
 
   List<Slider> get items {
     return _sliders;
+  }
+
+  static Future<void> initSliders() async {
+    final CollectionReference _slidersRef =
+        FirebaseFirestore.instance.collection('sliders');
+    QuerySnapshot slidersnapshot = await _slidersRef.get();
+    List<Slider> list = [];
+    slidersnapshot.docs.forEach((element) {
+      list.add(Slider.fromJson(element));
+    });
+    _sliders = list;
   }
 
   Future<void> setSliders() async {

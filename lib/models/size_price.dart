@@ -5,12 +5,14 @@ class ProductSizePrice {
   final TextEditingController sizePriceController;
   final FocusNode sizeNameFocusNode;
   final FocusNode sizePriceFocusNode;
+  int stock;
 
   ProductSizePrice({
     @required this.sizeNameController,
     @required this.sizePriceController,
     @required this.sizeNameFocusNode,
     @required this.sizePriceFocusNode,
+    this.stock,
   });
 
   factory ProductSizePrice.fromJSON(Map data) {
@@ -23,6 +25,7 @@ class ProductSizePrice {
       sizePriceController: priceController,
       sizeNameFocusNode: FocusNode(),
       sizePriceFocusNode: FocusNode(),
+      stock: data['stock'],
     );
   }
 }

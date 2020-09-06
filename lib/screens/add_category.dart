@@ -17,23 +17,25 @@ final StorageReference storageReference = FirebaseStorage.instance.ref();
 
 class AddCategoryScreen extends StatefulWidget {
   static final String ROUTE_NAME = "add_category_screen";
-  Category editProduct;
+  Category editCategory;
 
-  AddCategoryScreen({this.editProduct});
+  AddCategoryScreen({this.editCategory});
 
   @override
   _AddCategoryScreenState createState() => _AddCategoryScreenState();
 }
 
 class _AddCategoryScreenState extends State<AddCategoryScreen> {
-  CollectionReference _categoryRef =
-      FirebaseFirestore.instance.collection('categories');
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
   final _categoryNameController = TextEditingController();
+  final _catDescriptionController = TextEditingController();
+  final _catDescriptionFNode = FocusNode();
+  bool _catStatus = true;
+
   String _categoryId;
-  String appHeading;
+  String appHeading = '';
 
   File _imageFile;
   Directory tempDir;
@@ -53,10 +55,12 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
         id: _categoryId,
         name: _categoryNameController.text,
         imageUrl: mediaUrl,
+        status: _catStatus,
+        description: _catDescriptionController.text,
       );
       await categoriesProvider.addEditCategory(category: category);
       Toast.show(
-        widget.editProduct == null
+        widget.editCategory == null
             ? 'Category is added!!'
             : 'Category is updated!!',
         context,
@@ -160,17 +164,19 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
     tempDir = await getTemporaryDirectory();
     setState(() {
       appHeading =
-          (widget.editProduct == null) ? 'Add Category' : 'Edit Category';
-      _categoryId = widget.editProduct == null
+          (widget.editCategory == null) ? 'Add Category' : 'Edit Category';
+      _categoryId = widget.editCategory == null
           ? DateTime.now().millisecondsSinceEpoch.toString()
-          : widget.editProduct.id;
+          : widget.editCategory.id;
     });
-    if (widget.editProduct != null) {
+    if (widget.editCategory != null) {
       setState(() {
         _isLoading = true;
       });
-      _categoryNameController.text = widget.editProduct.name;
-      File tmpFile = await convertUriToFile(url: widget.editProduct.imageUrl);
+      _categoryNameController.text = widget.editCategory.name;
+      _catDescriptionController.text = widget.editCategory.description;
+      _catStatus = widget.editCategory.status;
+      File tmpFile = await convertUriToFile(url: widget.editCategory.imageUrl);
       setState(() {
         if (tmpFile != null) {
           _imageFile = tmpFile;
@@ -262,10 +268,31 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                           }
                           return null;
                         },
-                        textInputAction: TextInputAction.done,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) {
+                          FocusScope.of(context)
+                              .requestFocus(_catDescriptionFNode);
+                        },
+                      ),
+                      TextFormField(
+                        controller: _catDescriptionController,
+                        focusNode: _catDescriptionFNode,
+                        decoration: InputDecoration(
+                          labelText: 'Product Description',
+                        ),
+                        maxLines: 5,
                         onFieldSubmitted: (_) {
                           _saveForm();
                         },
+                      ),
+                      SwitchListTile(
+                        value: _catStatus,
+                        onChanged: (value) {
+                          setState(() {
+                            _catStatus = value;
+                          });
+                        },
+                        title: Text('Status'),
                       ),
                     ],
                   ),

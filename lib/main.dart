@@ -7,6 +7,7 @@ import 'package:abhi_shop/screens/add_slider.dart';
 import 'package:abhi_shop/screens/category_list.dart';
 import 'package:abhi_shop/screens/products_list.dart';
 import 'package:abhi_shop/screens/sliders_list.dart';
+import 'package:abhi_shop/screens/stock.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,9 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await ProductProvider.initProducts();
+  await CategoryProvider.initCategories();
+  await SliderProvider.initSliders();
   runApp(MyApp());
 }
 
@@ -45,6 +49,7 @@ class MyApp extends StatelessWidget {
           AddCategoryScreen.ROUTE_NAME: (context) => AddCategoryScreen(),
           SlidersListScreen.ROUTE_NAME: (context) => SlidersListScreen(),
           AddSliderScreen.ROUTE_NAME: (context) => AddSliderScreen(),
+          StockListScreen.ROUTE_NAME: (context) => StockListScreen(),
         },
       ),
     );

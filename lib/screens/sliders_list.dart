@@ -22,7 +22,6 @@ class SlidersListScreen extends StatelessWidget {
     final slidersProvider = Provider.of<SliderProvider>(context);
     final categoriesProvider = Provider.of<CategoryProvider>(context);
     final productsProvider = Provider.of<ProductProvider>(context);
-    slidersProvider.setSliders();
     List<slider.Slider> sliderList = slidersProvider.items;
 
     return Scaffold(

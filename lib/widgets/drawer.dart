@@ -1,6 +1,7 @@
 import 'package:abhi_shop/screens/category_list.dart';
 import 'package:abhi_shop/screens/products_list.dart';
 import 'package:abhi_shop/screens/sliders_list.dart';
+import 'package:abhi_shop/screens/stock.dart';
 import 'package:flutter/material.dart';
 
 class MainDrawer extends StatelessWidget {
@@ -33,6 +34,14 @@ class MainDrawer extends StatelessWidget {
                   FocusScope.of(context).unfocus();
                   Navigator.of(context)
                       .pushReplacementNamed(SlidersListScreen.ROUTE_NAME);
+                },
+              ),
+              ListTile(
+                title: Text('Stocks'),
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                  Navigator.of(context)
+                      .pushReplacementNamed(StockListScreen.ROUTE_NAME);
                 },
               ),
             ],

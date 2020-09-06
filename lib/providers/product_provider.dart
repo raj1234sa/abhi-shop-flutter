@@ -6,11 +6,45 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 class ProductProvider with ChangeNotifier {
-  List<Product> _products = [];
-  String keyword = '';
+  static List<Product> _products = [];
+  static String keyword = '';
+  static bool loading = true;
 
   List<Product> get items {
     return _products;
+  }
+
+  static Future<void> initProducts() async {
+    CollectionReference _productsRef =
+        FirebaseFirestore.instance.collection('products');
+    QuerySnapshot prodsnapshot = await _productsRef.get();
+    List<Product> list = [];
+    if (keyword.isNotEmpty) {
+      prodsnapshot.docs.forEach((element) {
+        Product prodObj = Product.fromJson(element);
+        if (prodObj.productName.toLowerCase().contains(keyword.toLowerCase())) {
+          list.add(prodObj);
+        }
+      });
+    } else {
+      prodsnapshot.docs.forEach((element) {
+        list.add(Product.fromJson(element));
+      });
+    }
+    _products = list;
+    loading = false;
+  }
+
+  bool get isLoding {
+    return loading;
+  }
+
+  List<Product> get activeItems {
+    return _products.where((element) => element.status);
+  }
+
+  List<Product> get inactiveItems {
+    return _products.where((element) => !element.status);
   }
 
   Future<void> setProducts() async {
@@ -31,6 +65,7 @@ class ProductProvider with ChangeNotifier {
       });
     }
     _products = list;
+    loading = false;
     notifyListeners();
   }
 

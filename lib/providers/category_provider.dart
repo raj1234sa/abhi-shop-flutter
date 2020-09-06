@@ -1,15 +1,36 @@
 import 'dart:io';
 
 import 'package:abhi_shop/models/category.dart';
+import 'package:abhi_shop/models/product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 
 class CategoryProvider with ChangeNotifier {
-  List<Category> _categories = [];
+  static List<Category> _categories = [];
+  List<Product> _products = [];
 
   List<Category> get items {
     return _categories;
+  }
+
+  static Future<void> initCategories() async {
+    final CollectionReference _categoriesRef =
+        FirebaseFirestore.instance.collection('categories');
+    QuerySnapshot catsnapshot = await _categoriesRef.get();
+    List<Category> list = [];
+    catsnapshot.docs.forEach((element) {
+      list.add(Category.fromJson(element));
+    });
+    _categories = list;
+  }
+
+  List<Category> get activeItems {
+    return _categories.where((element) => element.status);
+  }
+
+  List<Category> get inactiveItems {
+    return _categories.where((element) => !element.status);
   }
 
   Future<void> setCategories() async {

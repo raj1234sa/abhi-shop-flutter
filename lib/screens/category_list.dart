@@ -12,6 +12,27 @@ final StorageReference storageReference = FirebaseStorage.instance.ref();
 class CategoryListScreen extends StatelessWidget {
   static final String ROUTE_NAME = "category_list_screen";
 
+  List<Map> popupMenuList = [
+    {
+      'name': 'Edit',
+      'icon': Icon(Icons.edit),
+      'value': 'edit',
+    },
+    {
+      'name': 'Copy ID',
+      'icon': Icon(Icons.content_copy),
+      'value': 'copyid',
+    },
+    {
+      'name': 'Delete',
+      'icon': Icon(
+        Icons.delete,
+        color: Colors.red,
+      ),
+      'value': 'delete',
+    },
+  ];
+
   Future<void> refreshCategories(BuildContext context) async {
     Provider.of<CategoryProvider>(
       context,
@@ -19,10 +40,69 @@ class CategoryListScreen extends StatelessWidget {
     ).setCategories();
   }
 
+  void menuItemSelected(String selected, BuildContext context,
+      {category}) async {
+    switch (selected) {
+      case 'edit':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddCategoryScreen(
+              editCategory: category,
+            ),
+          ),
+        );
+        break;
+      case 'copyid':
+        Clipboard.setData(
+          ClipboardData(text: category.id),
+        );
+        Scaffold.of(context).hideCurrentSnackBar();
+        Scaffold.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Category ID is copied to clipboard.'),
+          ),
+        );
+        break;
+      case 'delete':
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Warning'),
+              content: Text(
+                'Are you sure to delete the category??',
+              ),
+              actions: <Widget>[
+                FlatButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text('No'),
+                ),
+                FlatButton(
+                  onPressed: () async {
+                    await Provider.of<CategoryProvider>(
+                      context,
+                      listen: false,
+                    ).deleteCategory(
+                      id: category.id,
+                    );
+                    Navigator.of(context).pop(true);
+                  },
+                  child: Text('Yes'),
+                ),
+              ],
+            );
+          },
+        );
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoriesProvider = Provider.of<CategoryProvider>(context);
-    categoriesProvider.setCategories();
     final categoryList = categoriesProvider.items;
     return Scaffold(
       drawer: MainDrawer(),
@@ -38,93 +118,61 @@ class CategoryListScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => refreshCategories(context),
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: ListView.builder(
-            itemBuilder: (context, index) {
-              Category cat = categoryList[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: NetworkImage(cat.imageUrl),
-                ),
-                title: Text(cat.name),
-                trailing: Container(
-                  width: MediaQuery.of(context).size.width * .40,
-                  child: Row(
-                    children: <Widget>[
-                      IconButton(
-                        tooltip: 'Copy ID',
-                        icon: Icon(Icons.content_copy),
-                        onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(text: cat.id),
-                          );
-                          Scaffold.of(context).hideCurrentSnackBar();
-                          Scaffold.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text('Category ID is copied to clipboard.'),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.edit),
-                        onPressed: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AddCategoryScreen(
-                                editProduct: cat,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete),
-                        color: Theme.of(context).errorColor,
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: Text('Warning'),
-                                content: Text(
-                                  'Are you sure to delete the category??',
-                                ),
-                                actions: <Widget>[
-                                  FlatButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop(false);
-                                    },
-                                    child: Text('No'),
-                                  ),
-                                  FlatButton(
-                                    onPressed: () async {
-                                      await categoriesProvider.deleteCategory(
-                                        id: cat.id,
-                                      );
-                                      Navigator.of(context).pop(true);
-                                    },
-                                    child: Text('Yes'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            itemCount: categoryList.length,
+      body: Column(
+        children: <Widget>[
+          Container(
+            margin: EdgeInsets.only(top: 15),
+            child: Text(
+              'Note: Background color indicates the status of product.',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[700],
+              ),
+            ),
           ),
-        ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => refreshCategories(context),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: ListView.builder(
+                  itemBuilder: (context, index) {
+                    Category cat = categoryList[index];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: cat.status ? Colors.green[50] : Colors.red[50],
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: NetworkImage(cat.imageUrl),
+                        ),
+                        title: Text(cat.name),
+                        trailing: PopupMenuButton(
+                          onSelected: (value) {
+                            menuItemSelected(value, context, category: cat);
+                          },
+                          itemBuilder: (context) => popupMenuList
+                              .map(
+                                (menu) => PopupMenuItem(
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.all(0),
+                                    leading: menu['icon'],
+                                    title: Text(menu['name']),
+                                  ),
+                                  value: menu['value'],
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    );
+                  },
+                  itemCount: categoryList.length,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

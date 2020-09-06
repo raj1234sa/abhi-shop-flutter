@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:abhi_shop/models/category.dart';
 import 'package:abhi_shop/models/product.dart';
 import 'package:abhi_shop/models/size_price.dart';
+import 'package:abhi_shop/providers/category_provider.dart';
 import 'package:abhi_shop/providers/product_provider.dart';
 import 'package:abhi_shop/widgets/icon_avatar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -27,27 +27,37 @@ class AddProductScreen extends StatefulWidget {
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
-  final CollectionReference _productsRef =
-      FirebaseFirestore.instance.collection('products');
-  final CollectionReference _categoriesRef =
-      FirebaseFirestore.instance.collection('categories');
   final StorageReference storageReference = FirebaseStorage.instance.ref();
   final _formKey = GlobalKey<FormState>();
 
   final _prodNameController = TextEditingController();
+  final _prodDescriptionController = TextEditingController();
+  final _prodDescriptionFNode = FocusNode();
 
   bool _isHotProduct = false;
   bool _isNewArrival = true;
+  bool _prodStatus = true;
 
-  String productId;
+  String _productId;
 
   File _imageFile;
   bool _loading = false;
   Directory tempDir;
   String appHeading;
-  var selectedCategory;
+  var _selectedCategory;
+  var _selectedPriceMethod;
 
   List<DropdownMenuItem> _categoriesList = [];
+  List<DropdownMenuItem> _priceMethodList = [
+    DropdownMenuItem(
+      child: Text('Per Piece'),
+      value: 'Per Piece',
+    ),
+    DropdownMenuItem(
+      child: Text('Per Kilogram'),
+      value: 'Per Kilogram',
+    ),
+  ];
 
   List<ProductSizePrice> _productSizePriceList = [
     ProductSizePrice(
@@ -59,12 +69,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
   ];
 
   List<dynamic> getSizePricesFromModel() {
-    return _productSizePriceList
-        .map((sizePrice) => {
-              'size': sizePrice.sizeNameController.text,
-              'price': sizePrice.sizePriceController.text,
-            })
-        .toList();
+    if (widget.editProduct == null) {
+      return _productSizePriceList
+          .map((sizePrice) => {
+                'size': sizePrice.sizeNameController.text,
+                'price': sizePrice.sizePriceController.text,
+                'stock': 0,
+              })
+          .toList();
+    } else {
+      return _productSizePriceList
+          .map((sizePrice) => {
+                'size': sizePrice.sizeNameController.text,
+                'price': sizePrice.sizePriceController.text,
+              })
+          .toList();
+    }
   }
 
   Future<void> compressImage(File file) async {
@@ -90,15 +110,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
       FocusScope.of(context).unfocus();
       // await compressImage(_imageFile);
       String mediaUrl =
-          await productsProvider.uploadImage(_imageFile, productId);
+          await productsProvider.uploadImage(_imageFile, _productId);
       Product product = Product(
-        id: productId,
+        id: _productId,
         productName: _prodNameController.text,
         sizePrices: getSizePricesFromModel(),
         isHotProduct: _isHotProduct,
         isNewArrival: _isNewArrival,
         imageUrl: mediaUrl,
-        categoryId: selectedCategory,
+        categoryId: _selectedCategory,
+        status: _prodStatus,
+        description: _prodDescriptionController.text,
+        priceMethod: _selectedPriceMethod,
       );
       productsProvider.addEditProduct(product: product);
       Toast.show(
@@ -117,19 +140,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Future<void> getCategory() async {
-    _categoriesRef.get().then((QuerySnapshot value) {
-      setState(() {
-        _categoriesList = value.docs.map((cat) {
-          Category category = Category.fromJson(cat);
-          return DropdownMenuItem(
-            child: Text(category.name),
-            value: category.id,
-          );
-        }).toList();
-        selectedCategory = widget.editProduct == null
-            ? _categoriesList[0].value
-            : widget.editProduct.categoryId;
-      });
+    List<Category> cats = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    ).items;
+    setState(() {
+      _categoriesList = cats.map((cat) {
+        return DropdownMenuItem(
+          child: Text(cat.name),
+          value: cat.id,
+        );
+      }).toList();
+      _selectedCategory = widget.editProduct == null
+          ? _categoriesList[0].value
+          : widget.editProduct.categoryId;
     });
   }
 
@@ -211,14 +235,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Future<void> initializeData() async {
     tempDir = await getTemporaryDirectory();
-    productId = widget.editProduct == null
+    _productId = widget.editProduct == null
         ? DateTime.now().millisecondsSinceEpoch.toString()
         : widget.editProduct.id;
+    _selectedPriceMethod = (widget.editProduct == null)
+        ? _priceMethodList[0].value
+        : widget.editProduct.priceMethod;
     if (widget.editProduct != null) {
       setState(() {
         _loading = true;
       });
       _prodNameController.text = widget.editProduct.productName;
+      _prodDescriptionController.text = widget.editProduct.description;
       _productSizePriceList = widget.editProduct.sizePrices
           .map(
             (sizePriceJson) => ProductSizePrice.fromJSON(sizePriceJson),
@@ -226,6 +254,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           .toList();
       _isHotProduct = widget.editProduct.isHotProduct;
       _isNewArrival = widget.editProduct.isNewArrival;
+      _prodStatus = widget.editProduct.status;
       File _fileImage =
           await convertUriToFile(url: widget.editProduct.imageUrl);
       if (_fileImage != null) {
@@ -324,16 +353,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       },
                     ),
                     Container(
-                      padding: EdgeInsets.only(top: 10),
-                      child: DropdownButton(
-                        items: _categoriesList,
-                        value: selectedCategory,
-                        isExpanded: true,
-                        onChanged: (value) {
-                          setState(() {
-                            selectedCategory = value;
-                          });
-                        },
+                      margin: EdgeInsets.only(top: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Product Category',
+                            style: TextStyle(
+                              fontSize: 16,
+                            ),
+                          ),
+                          DropdownButton(
+                            items: _categoriesList,
+                            value: _selectedCategory,
+                            isExpanded: true,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedCategory = value;
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     ..._productSizePriceList.map((productSizePrice) {
@@ -379,8 +419,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               },
                               onFieldSubmitted: (_) {
                                 FocusScope.of(context).requestFocus(
-                                    _productSizePriceList[index + 1]
-                                        .sizeNameFocusNode);
+                                    (index + 1) == _productSizePriceList.length
+                                        ? _prodDescriptionFNode
+                                        : _productSizePriceList[index + 1]
+                                            .sizeNameFocusNode);
                               },
                               textInputAction: TextInputAction.next,
                               focusNode: productSizePrice.sizePriceFocusNode,
@@ -416,6 +458,47 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       },
                       icon: Icon(Icons.add),
                       label: Text('Add Size'),
+                    ),
+                    Container(
+                      margin: EdgeInsets.only(top: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Pricing Method',
+                            style: TextStyle(
+                              fontSize: 16,
+                            ),
+                          ),
+                          DropdownButton(
+                            items: _priceMethodList,
+                            value: _selectedPriceMethod,
+                            isExpanded: true,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedPriceMethod = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextFormField(
+                      controller: _prodDescriptionController,
+                      focusNode: _prodDescriptionFNode,
+                      decoration: InputDecoration(
+                        labelText: 'Product Description',
+                      ),
+                      maxLines: 5,
+                    ),
+                    SwitchListTile(
+                      value: _prodStatus,
+                      onChanged: (value) {
+                        setState(() {
+                          _prodStatus = value;
+                        });
+                      },
+                      title: Text('Status'),
                     ),
                     SwitchListTile(
                       value: _isHotProduct,
