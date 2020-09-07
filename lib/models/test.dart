@@ -16,7 +16,6 @@ class AppState<T> {
   /// When App is Having Error
   AppState.error(this.message) : status = Status.ERROR;
 
-
 }
 
 enum Status { LOADING, COMPLETED, ERROR }

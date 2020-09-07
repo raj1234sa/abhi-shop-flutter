@@ -77,7 +77,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
         .map((sizePrice) => {
               'size': sizePrice.sizeNameController.text,
               'price': sizePrice.sizePriceController.text,
-              'stock': widget.editProduct == null ? 0 : sizePrice.stock ?? 0,
             })
         .toList();
   }
@@ -118,7 +117,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
         description: _prodDescriptionController.text,
         priceMethod: _selectedPriceMethod,
       );
-      productsProvider.addEditProduct(product: product);
+      bool add = widget.editProduct == null ? true : false;
+      productsProvider.addEditProduct(
+        product: product,
+        addMode: add,
+      );
       Toast.show(
         widget.editProduct == null
             ? 'Product is added!!'

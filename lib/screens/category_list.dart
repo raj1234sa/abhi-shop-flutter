@@ -55,7 +55,7 @@ class CategoryListScreen extends StatelessWidget {
         break;
       case 'copyid':
         Clipboard.setData(
-          ClipboardData(text: category.id),
+          ClipboardData(text: category.productId),
         );
         Scaffold.of(context).hideCurrentSnackBar();
         Scaffold.of(context).showSnackBar(
@@ -86,7 +86,7 @@ class CategoryListScreen extends StatelessWidget {
                       context,
                       listen: false,
                     ).deleteCategory(
-                      id: category.id,
+                      id: category.productId,
                     );
                     Navigator.of(context).pop(true);
                   },
