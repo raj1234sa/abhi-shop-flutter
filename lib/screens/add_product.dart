@@ -57,6 +57,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: Text('Per Kilogram'),
       value: 'Per Kilogram',
     ),
+    DropdownMenuItem(
+      child: Text('Per Dozen'),
+      value: 'Per Dozen',
+    ),
   ];
 
   List<ProductSizePrice> _productSizePriceList = [
@@ -69,22 +73,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
   ];
 
   List<dynamic> getSizePricesFromModel() {
-    if (widget.editProduct == null) {
-      return _productSizePriceList
-          .map((sizePrice) => {
-                'size': sizePrice.sizeNameController.text,
-                'price': sizePrice.sizePriceController.text,
-                'stock': 0,
-              })
-          .toList();
-    } else {
-      return _productSizePriceList
-          .map((sizePrice) => {
-                'size': sizePrice.sizeNameController.text,
-                'price': sizePrice.sizePriceController.text,
-              })
-          .toList();
-    }
+    return _productSizePriceList
+        .map((sizePrice) => {
+              'size': sizePrice.sizeNameController.text,
+              'price': sizePrice.sizePriceController.text,
+              'stock': widget.editProduct == null ? 0 : sizePrice.stock ?? 0,
+            })
+        .toList();
   }
 
   Future<void> compressImage(File file) async {

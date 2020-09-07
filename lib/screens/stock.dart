@@ -1,7 +1,7 @@
 import 'package:abhi_shop/models/product.dart';
-import 'package:abhi_shop/models/size_price.dart';
 import 'package:abhi_shop/providers/product_provider.dart';
 import 'package:abhi_shop/widgets/drawer.dart';
+import 'package:abhi_shop/widgets/stock_item.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,10 +28,9 @@ class StockListScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               Product prod = productList[index];
               List sizePrice = prod.sizePrices;
-              return ListTile(
-                title: Text(prod.productName),
-                subtitle: Text('Stock Remains: ' +
-                    (sizePrice[0]['stock'] ?? 0).toString()),
+              return StockItem(
+                stockData: sizePrice,
+                product: prod,
               );
             },
             itemCount: productList.length,
