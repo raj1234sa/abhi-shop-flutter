@@ -5,9 +5,11 @@ import 'package:abhi_shop/models/stock.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class ProductProvider with ChangeNotifier {
   static List<Product> _products = [];
+  static List<Stock> _stocks = [];
   static String keyword = '';
   static bool loading = true;
 
@@ -15,10 +17,40 @@ class ProductProvider with ChangeNotifier {
     return _products;
   }
 
+  Future<dynamic> manageStock({productId, stockId, amount, mode}) async {
+    CollectionReference _stockRef =
+        FirebaseFirestore.instance.collection('stock');
+    var status = null;
+    _stockRef.doc(productId).get().then((value) {
+      Stock stockObj = Stock.fromJson(value);
+      List stockList = stockObj.stockData;
+      if (mode == '+') {
+        stockList[stockId]['$stockId'] =
+            stockList[stockId]['$stockId'] + int.parse(amount);
+        _stockRef.doc(productId).set(stockObj.toJson());
+      } else if (mode == '-' &&
+          (stockList[stockId]['$stockId'] - int.parse(amount)) >= 0) {
+        stockList[stockId]['$stockId'] =
+            stockList[stockId]['$stockId'] - int.parse(amount);
+        _stockRef.doc(productId).set(stockObj.toJson());
+      } else {
+        status = [
+          'Stock Debit amount is more than remaining stock',
+          Colors.red
+        ];
+      }
+    });
+    await setProducts();
+    return status;
+  }
+
   static Future<void> initProducts() async {
     CollectionReference _productsRef =
         FirebaseFirestore.instance.collection('products');
+    CollectionReference _stockRef =
+        FirebaseFirestore.instance.collection('stock');
     QuerySnapshot prodsnapshot = await _productsRef.get();
+    QuerySnapshot stocksnapshot = await _stockRef.get();
     List<Product> list = [];
     if (keyword.isNotEmpty) {
       prodsnapshot.docs.forEach((element) {
@@ -32,7 +64,12 @@ class ProductProvider with ChangeNotifier {
         list.add(Product.fromJson(element));
       });
     }
+    List<Stock> stocklist = [];
+    stocksnapshot.docs.forEach((element) {
+      stocklist.add(Stock.fromJson(element));
+    });
     _products = list;
+    _stocks = stocklist;
     loading = false;
   }
 
@@ -51,7 +88,10 @@ class ProductProvider with ChangeNotifier {
   Future<void> setProducts() async {
     CollectionReference _productsRef =
         FirebaseFirestore.instance.collection('products');
+    CollectionReference _stockRef =
+        FirebaseFirestore.instance.collection('stock');
     QuerySnapshot prodsnapshot = await _productsRef.get();
+    QuerySnapshot stocksnapshot = await _stockRef.get();
     List<Product> list = [];
     if (keyword.isNotEmpty) {
       prodsnapshot.docs.forEach((element) {
@@ -65,22 +105,34 @@ class ProductProvider with ChangeNotifier {
         list.add(Product.fromJson(element));
       });
     }
+    List<Stock> stocklist = [];
+    stocksnapshot.docs.forEach((element) {
+      stocklist.add(Stock.fromJson(element));
+    });
     _products = list;
+    _stocks = stocklist;
     loading = false;
     notifyListeners();
+  }
+
+  Stock getStockData({productId}) {
+    return _stocks.firstWhere((element) => element.productId == productId);
   }
 
   Product getProductData({@required id}) {
     return _products.firstWhere((element) => element.id == id);
   }
 
-  Future<void> addEditProduct({@required Product product, @required bool addMode}) async {
+  Future<void> addEditProduct({
+    @required Product product,
+    @required bool addMode,
+  }) async {
     CollectionReference _productsRef =
         FirebaseFirestore.instance.collection('products');
     CollectionReference _stockRef =
         FirebaseFirestore.instance.collection('stock');
     await _productsRef.doc(product.id).set(product.toJson());
-    if(addMode) {
+    if (addMode) {
       List<Map<String, int>> stockData = product.sizePrices.map((e) {
         String id = product.sizePrices.indexOf(e).toString();
         return {id: 0};

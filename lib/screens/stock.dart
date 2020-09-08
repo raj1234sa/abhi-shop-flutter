@@ -9,7 +9,7 @@ class StockListScreen extends StatelessWidget {
   static final ROUTE_NAME = 'stock_list_screen';
 
   Future<void> refreshStock(BuildContext context) async {
-    await Provider.of<ProductProvider>(context).setProducts();
+    await Provider.of<ProductProvider>(context, listen: false).setProducts();
   }
 
   @override
@@ -27,9 +27,7 @@ class StockListScreen extends StatelessWidget {
           child: ListView.builder(
             itemBuilder: (context, index) {
               Product prod = productList[index];
-              List sizePrice = prod.sizePrices;
               return StockItem(
-                stockData: sizePrice,
                 product: prod,
               );
             },

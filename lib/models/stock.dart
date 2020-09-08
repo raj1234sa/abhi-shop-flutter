@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Stock {
   String productId;
-  List<Map<String, int>> stockData;
+  List<dynamic> stockData;
 
   Stock({
     this.productId,
